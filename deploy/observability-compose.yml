@@ -6,8 +6,8 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-lifecycle"
     volumes:
-      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./deploy/observability/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
     ports:
       - "9091:9090"
     restart: unless-stopped
@@ -16,10 +16,10 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.2
-    volumes:
-      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     container_name: morphflow-obsv-grafana
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -60,7 +60,7 @@ services:
     container_name: morphflow-obsv-fluent-bit
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
     volumes:
-      - ./deploy/observability/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./observability/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:

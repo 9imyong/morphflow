@@ -55,7 +55,18 @@ class SqlAlchemyJobRepository:
         if error is not None:
             model.error_message = error
         await self.session.flush()
-        return await self.get(job_id)
+        # Keep model state fully loaded in async context to avoid lazy-load after flush.
+        await self.session.refresh(model)
+        return Job(
+            id=model.id,
+            status=JobStatus(model.status),
+            request_payload=model.request_payload,
+            result=model.result,
+            error=model.error_message,
+            retry_count=model.retry_count,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
 
 
 class SqlAlchemyJobEventRepository:
