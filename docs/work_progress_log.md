@@ -361,3 +361,20 @@
   - 최종 패키지 문서: `docs/architecture_operations_package_20260310.md`
   - 성능 요약 문서: `docs/perf_summary_abc_20260310.md`
   - C 모드는 현재 시나리오 검증까지 완료, k6 부하 실측은 후속 태스크로 권장
+
+### [Task-20260310-18] Dummy Processor를 Inference Simulator로 대체
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 실제 GPU 모델 연동 전 단계에서 inference 병목/동시성/지연/실패/재시도 검증이 가능하도록 기본 processor를 simulator로 전환한다.
+- 작업 단위:
+  - [x] WU-1: simulator failure rate 설정값 및 metric 추가
+  - [x] WU-2: processor factory(`simulator|dummy`) 추가로 교체 가능한 구조 유지
+  - [x] WU-3: unified/inference/downstream(non-C) 경로의 기본 processor를 simulator로 전환
+  - [x] WU-4: env(dev/prod) 설정값 추가
+  - [x] WU-5: simulator 단위 테스트 및 기존 통합 테스트 검증
+- 메모/이슈:
+  - `WORKER_PROCESSOR_BACKEND=dummy`로 언제든 기존 dummy 경로 사용 가능
+  - 검증 결과: `uv run --extra dev pytest -q ...` (`22 passed`)

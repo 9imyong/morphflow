@@ -26,6 +26,7 @@ docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d --build
 
 ### B 모드 (추론 분리)
 - API -> `inference-topic` -> inference worker
+- processor backend 기본값: `simulator` (`WORKER_PROCESSOR_BACKEND`)
 - 실행:
 ```bash
 docker compose -f docker-compose.dev.yml -f deploy/docker-compose.bmode.override.yml --env-file env/.env.dev up -d --build
@@ -62,6 +63,20 @@ docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override
 - retry backoff: exponential
 - `RETRY_MAX_COUNT` 초과 시 DLQ 전송
 - DLQ는 원본 payload 유지
+
+### Inference Simulator 설정
+- `WORKER_PROCESSOR_BACKEND=simulator|dummy`
+- `INFERENCE_MAX_CONCURRENCY`
+- `INFERENCE_SIMULATED_LATENCY_MS`
+- `INFERENCE_SIMULATED_FAILURE_RATE`
+- `INFERENCE_SIMULATED_GPU_UTILIZATION`
+
+관련 메트릭:
+- `inference_processing_seconds`
+- `inference_semaphore_wait_seconds`
+- `inference_active_jobs`
+- `inference_simulated_gpu_utilization`
+- `inference_simulated_failure_total`
 
 ### DLQ 확인/재처리
 ```bash
@@ -136,4 +151,3 @@ alembic downgrade -1
   - `docs/incident_runbook_abctransition.md`
 - 작업 로그:
   - `docs/work_progress_log.md`
-
