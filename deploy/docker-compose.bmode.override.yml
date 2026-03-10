@@ -1,0 +1,15 @@
+services:
+  api:
+    environment:
+      ARCHITECTURE_MODE: B
+      KAFKA_INFERENCE_TOPIC: inference-topic
+      KAFKA_REQUEST_TOPIC: request-topic
+
+  worker:
+    environment:
+      WORKER_ROLE: inference
+      ARCHITECTURE_MODE: B
+      KAFKA_INFERENCE_TOPIC: inference-topic
+      INFERENCE_MAX_CONCURRENCY: 2
+      INFERENCE_SIMULATED_LATENCY_MS: 900
+      INFERENCE_SIMULATED_GPU_UTILIZATION: 0.85
