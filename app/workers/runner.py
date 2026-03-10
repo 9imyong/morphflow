@@ -57,11 +57,11 @@ async def run_worker() -> None:
     session_factory = create_session_factory(engine)
 
     redis = from_url(settings.redis_url, decode_responses=True)
-    role_handler = build_worker_role(settings=settings, session_factory=session_factory, redis=redis)
+    publisher = KafkaEventPublisher(settings.kafka_bootstrap_servers)
+    role_handler = build_worker_role(settings=settings, session_factory=session_factory, redis=redis, publisher=publisher)
     consume_topic = resolve_worker_topic(settings)
     consume_topics = list(dict.fromkeys([consume_topic, settings.kafka_retry_topic]))
     consumer_group = resolve_worker_group_id(settings)
-    publisher = KafkaEventPublisher(settings.kafka_bootstrap_servers)
 
     consumer = AIOKafkaConsumer(
         *consume_topics,

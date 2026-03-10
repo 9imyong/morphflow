@@ -55,6 +55,15 @@ groups:
           summary: "Kafka consumer lag is high"
           description: "Consumer lag exceeded 100 for 5 minutes; consider worker scaling."
 
+      - alert: DownstreamConsumerLagHigh
+        expr: max(kafka_consumergroup_lag{consumergroup="architecture-a-worker-downstream"}) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Downstream consumer lag is high"
+          description: "Downstream lag exceeded 100 for 5 minutes; C architecture downstream worker may be saturated."
+
       - alert: WorkerProcessingTimeHigh
         expr: histogram_quantile(0.95, sum(rate(job_processing_seconds_bucket[5m])) by (le)) > 5
         for: 10m
@@ -90,3 +99,12 @@ groups:
         annotations:
           summary: "Postgres read latency increased"
           description: "DB read time increased; Architecture C transition may be needed."
+
+      - alert: DownstreamProcessingTimeHigh
+        expr: histogram_quantile(0.95, sum(rate(downstream_processing_seconds_bucket[5m])) by (le)) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Downstream processing time increased"
+          description: "Downstream p95 latency is high; split/scale downstream workers."

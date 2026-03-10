@@ -153,6 +153,32 @@ A/B/C 전환 판단:
 
 ---
 
+### 3.6 Downstream 처리 병목
+
+증상/예측 지표:
+- `max(kafka_consumergroup_lag{consumergroup="architecture-a-worker-downstream"})` 증가
+- `histogram_quantile(0.95, sum(rate(downstream_processing_seconds_bucket[5m])) by (le))` 상승
+- job이 `PROCESSING` 상태에 장시간 체류
+
+1차 대응:
+1. downstream worker 인스턴스/리소스 우선 확장
+2. downstream 외부 연동(저장소/API/알림) 장애 여부 확인
+3. retry/DLQ 증가 시 error-reason 기준으로 오류 유형 분리
+
+복구 절차:
+1. downstream lag 감소와 p95 latency 회복을 동시에 확인
+2. `PROCESSING` 장기 체류 job의 재처리/정합성 검증
+3. 필요 시 downstream task를 더 작은 단위로 재분리
+
+후속 조치:
+- downstream 전용 autoscaling 기준 정의(lag + latency)
+- 외부 연동 지연 구간을 별도 metric으로 추가 계측
+
+A/B/C 전환 판단:
+- 본 시나리오는 **C 경로 스케일링/세분화** 대상
+
+---
+
 ## 4. RCA/재발방지 표준 절차
 
 1. 사고 타임라인 정리

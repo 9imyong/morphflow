@@ -1,0 +1,40 @@
+services:
+  api:
+    environment:
+      ARCHITECTURE_MODE: C
+      KAFKA_INFERENCE_TOPIC: inference-topic
+      KAFKA_DOWNSTREAM_TOPIC: downstream-topic
+
+  worker:
+    environment:
+      WORKER_ROLE: inference
+      ARCHITECTURE_MODE: C
+      KAFKA_INFERENCE_TOPIC: inference-topic
+      KAFKA_DOWNSTREAM_TOPIC: downstream-topic
+      INFERENCE_MAX_CONCURRENCY: 2
+      INFERENCE_SIMULATED_LATENCY_MS: 900
+      INFERENCE_SIMULATED_GPU_UTILIZATION: 0.85
+
+  downstream-worker:
+    build:
+      context: .
+    command: python -m app.workers.runner
+    env_file:
+      - env/.env.dev
+    environment:
+      WORKER_ROLE: downstream
+      ARCHITECTURE_MODE: C
+      KAFKA_DOWNSTREAM_TOPIC: downstream-topic
+      WORKER_METRICS_PORT: 9001
+      DOWNSTREAM_SIMULATED_LATENCY_MS: 500
+    ports:
+      - "9001:9001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started

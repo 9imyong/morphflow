@@ -13,6 +13,10 @@ INFERENCE_ACTIVE_JOBS = Gauge("inference_active_jobs", "In-flight inference jobs
 INFERENCE_SIMULATED_GPU_UTILIZATION = Gauge(
     "inference_simulated_gpu_utilization", "Simulated GPU utilization (0.0~1.0)"
 )
+DOWNSTREAM_PROCESSING_SECONDS = Histogram("downstream_processing_seconds", "Downstream stage duration")
+DOWNSTREAM_EVENT_PUBLISHED_TOTAL = Counter("downstream_events_published_total", "Downstream events published")
+DOWNSTREAM_SUCCESS_TOTAL = Counter("downstream_success_total", "Downstream successful completions")
+DOWNSTREAM_FAILURE_TOTAL = Counter("downstream_failure_total", "Downstream failed completions")
 JOB_SUCCESS_TOTAL = Counter("jobs_success_total", "Number of successful jobs")
 JOB_FAILURE_TOTAL = Counter("jobs_failure_total", "Number of failed jobs")
 JOB_EVENT_PUBLISHED_TOTAL = Counter("job_events_published_total", "Number of Kafka events published")

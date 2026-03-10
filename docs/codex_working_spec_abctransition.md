@@ -371,8 +371,10 @@ INFERENCE_DONE
   - `DownstreamWorkerRole`
   - `build_worker_role(...)`
 
-현재는 A 아키텍처 동작을 깨지 않기 위해 inference/downstream role도 동일 처리 경로를 사용한다.
-즉, **실구현보다 역할 분리 구조를 먼저 고정**했다.
+Task-20260310-16 기준으로 C 최소 실구현이 반영되었다.
+- `ARCHITECTURE_MODE=C|BC`에서 inference role은 추론 후 `downstream-topic`으로 이벤트를 발행한다.
+- downstream role은 downstream task를 수행한 뒤 job을 `SUCCESS`로 완료한다.
+- A/B 모드는 기존 direct completion 경로를 유지한다.
 
 ### 10.2 Topic 분리 포인트
 - 설정 키:
@@ -389,7 +391,7 @@ INFERENCE_DONE
 아래 조건은 운영 데이터로 판단한다.
 
 1. A -> B(Inference 분리) 고려 조건
-   - `histogram_quantile(0.95, sum(rate(worker_job_processing_seconds_bucket[5m])) by (le))` 지속 상승
+   - `histogram_quantile(0.95, sum(rate(job_processing_seconds_bucket[5m])) by (le))` 지속 상승
    - `max(kafka_consumergroup_lag)`가 임계치 이상 유지
    - 처리 시간 대부분이 추론 단계에 집중
 
@@ -403,8 +405,8 @@ INFERENCE_DONE
 
 ### 10.4 구현 우선순위
 1. 역할/토픽 분리 구조 고정 (완료)
-2. Inference role의 실제 GPU 전용 처리 로직 이관
-3. Downstream role의 저장/업로드/API 호출 책임 분리
+2. Inference role의 실제 GPU 전용 처리 로직 이관 (완료: simulator 기반)
+3. Downstream role의 저장/업로드/API 호출 책임 분리 (완료: dummy downstream task 기반 최소 구현)
 4. 전환 임계치(alert rule)와 autoscaling 정책 연동
 | created_at | 생성시각 |
 | updated_at | 수정시각 |

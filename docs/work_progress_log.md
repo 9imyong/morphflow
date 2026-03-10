@@ -322,3 +322,23 @@
 - 메모/이슈:
   - worker는 기본 consume topic + `retry-topic`을 함께 구독
   - 실패 시 idempotency lock은 해제해 retry 처리 가능하도록 조정
+
+### [Task-20260310-16] C 아키텍처 최소 실구현
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 추론 완료 이후 저장/후처리 구간을 downstream topic 및 downstream worker로 분리하여 C 아키텍처 최소 실행 버전을 구현한다.
+- 작업 단위:
+  - [x] WU-1: downstream-topic 설정/환경값 정비 및 C 모드 topic 라우팅 반영
+  - [x] WU-2: inference 완료 후 downstream event publish 경로 구현
+  - [x] WU-3: downstream worker role/consumer 동작 경로 구현
+  - [x] WU-4: downstream dummy task 분리 실행 및 최종 SUCCESS 반영
+  - [x] WU-5: downstream lag/latency 관측용 metric 및 alert rule 추가
+  - [x] WU-6: README/architecture/runbook 문서에 C 경로 반영
+  - [x] WU-7: 시나리오 테스트(`tests/test_c_architecture_flow.py`)로 분리 동작 검증
+- 메모/이슈:
+  - `ARCHITECTURE_MODE=C|BC`에서 API는 `inference-topic`으로 발행하고, inference worker는 `downstream-topic`으로 전달
+  - downstream worker는 후처리 완료 시 job 결과를 `inference + downstream` 구조로 저장
+  - compose 실행용 override: `deploy/docker-compose.cmode.override.yml`

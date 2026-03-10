@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     inference_max_concurrency: int = 2
     inference_simulated_latency_ms: int = 700
     inference_simulated_gpu_utilization: float = 0.8
+    downstream_simulated_latency_ms: int = 300
     retry_max_count: int = 3
     retry_backoff_seconds: float = 1.0
     retry_backoff_multiplier: float = 2.0

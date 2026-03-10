@@ -255,10 +255,43 @@ Current behavior:
 - `inference` consumes `KAFKA_INFERENCE_TOPIC`
 - `downstream` consumes `KAFKA_DOWNSTREAM_TOPIC`
 
-At this stage, inference/downstream roles intentionally reuse the same processing path as A architecture, so the code structure is ready for B/C specialization without breaking current runtime behavior.
+`ARCHITECTURE_MODE=C|BC` behavior:
+1. API publishes to `KAFKA_INFERENCE_TOPIC`
+2. inference worker processes request and publishes `INFERENCE_COMPLETED` event to `KAFKA_DOWNSTREAM_TOPIC`
+3. downstream worker performs downstream dummy task and finalizes job as `SUCCESS`
+
+`ARCHITECTURE_MODE=A|B` keeps current direct completion behavior by role.
+
+Downstream tuning settings:
+- `DOWNSTREAM_SIMULATED_LATENCY_MS`
+
+Downstream metrics:
+- `downstream_processing_seconds`
+- `downstream_events_published_total`
+- `downstream_success_total`
+- `downstream_failure_total`
 
 ## Notes
 
 - This version implements Architecture A only.
-- B mode can split the processor into a dedicated inference worker while keeping the same event envelope and repository contracts.
-- C mode can add a downstream publisher/consumer pair without changing the API contract or base job model.
+- B mode splits inference processing to dedicated worker role.
+- C mode minimally implements inference -> downstream split with downstream dummy post-processing.
+
+## C Path Scenario Test
+
+Run scenario test for C architecture split:
+
+```bash
+uv run --extra dev pytest -q tests/test_c_architecture_flow.py
+```
+
+This test verifies:
+1. API path publishes to inference topic
+2. inference stage publishes downstream event
+3. downstream stage completes job (`PROCESSING -> SUCCESS`)
+
+Run C mode in compose (inference worker + downstream worker):
+
+```bash
+docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override.yml --env-file env/.env.dev up -d --build
+```
