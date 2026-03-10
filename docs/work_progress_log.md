@@ -112,20 +112,177 @@
   - 현재는 단일 노드 운영 기본안이며, HA/replication은 후속 작업 범위
 
 ### [Task-20260310-04] A 아키텍처 E2E 실행 검증
-- 상태: TODO
-- 진행도: 0%
+- 상태: DONE
+- 진행도: 100%
 - 담당: Codex
 - 시작일: 2026-03-10
-- 최근 업데이트: -
+- 최근 업데이트: 2026-03-10
 - 목표(DoD): docker compose 환경에서 API → Kafka → Worker → DB 파이프라인이 정상 동작하는지 검증한다.
 - 작업 단위:
-  - [ ] WU-1: docker compose 전체 서비스 기동(api/worker/postgres/redis/kafka)
-  - [ ] WU-2: POST /jobs 요청 테스트
-  - [ ] WU-3: Kafka request-topic 메시지 발행 확인
-  - [ ] WU-4: Worker consume 및 처리 확인
-  - [ ] WU-5: Job 상태(PENDING → PROCESSING → SUCCESS) DB 반영 확인
-  - [ ] WU-6: GET /jobs/{job_id} 결과 조회 확인
-  - [ ] WU-7: Idempotency-Key 중복 요청 테스트
+  - [x] WU-1: docker compose 전체 서비스 기동(api/worker/postgres/redis/kafka)
+  - [x] WU-2: POST /jobs 요청 테스트
+  - [x] WU-3: Kafka request-topic 메시지 발행 확인(오프셋 증가 확인)
+  - [x] WU-4: Worker consume 및 처리 확인
+  - [x] WU-5: Job 상태(PENDING → PROCESSING → SUCCESS) DB 반영 확인
+  - [x] WU-6: GET /jobs/{job_id} 결과 조회 확인
+  - [x] WU-7: Idempotency-Key 중복 요청 테스트
 - 메모/이슈:
-  - Worker 재시작 시 중복 처리 방지 확인
-  - Kafka partition/consumer group 정상 동작 확인
+  - Apache Kafka 4.0 env 변수 형식(`KAFKA_*`)으로 compose 수정
+  - worker 처리 중 `MissingGreenlet` 버그를 수정(`SqlAlchemyJobRepository.update_status`)
+  - Worker 재시작 + 동일 job 이벤트 재주입 후 중복 처리 방지 확인
+  - Kafka consumer group(`architecture-a-worker`) lag=0 확인
+
+### [Task-20260310-05] Observability 스택 구축
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 관측 스택 compose 및 설계 문서/실행 문서를 추가해 운영 판단 근거를 명시한다.
+- 작업 단위:
+  - [x] WU-1: `deploy/observability-compose.yml` 생성(prometheus/grafana/fluent-bit/elasticsearch/kibana)
+  - [x] WU-2: Observability 설정 파일 생성(prometheus, fluent-bit)
+  - [x] WU-3: 아키텍처 문서에 `Observability Architecture` 섹션 추가
+  - [x] WU-4: README 실행/검증 가이드 업데이트
+  - [x] WU-5: observability compose 실제 기동 및 `ps` 상태 확인
+- 메모/이슈:
+  - 서비스 compose 네트워크(`morphflow_default`)를 외부 네트워크로 재사용
+  - Kafka lag/Redis/Postgres exporter 스크랩 대상은 Prometheus 설정에 반영
+
+### [Task-20260310-06] Observability 완성(Exporter + 알람/대시보드)
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): exporter 실제 배포와 알람/대시보드 기본 구성을 통해 A/B/C 전환 판단 지표를 즉시 확인 가능한 상태로 만든다.
+- 작업 단위:
+  - [x] WU-1: observability compose에 `kafka/redis/postgres exporter` 서비스 추가
+  - [x] WU-2: Prometheus rule 파일(`prometheus-rules.yml`) 추가 및 alert rule 로드
+  - [x] WU-3: Grafana provisioning(datasource/dashboard provider) 및 기본 대시보드 추가
+  - [x] WU-4: README에 targets/rules/log 검증 명령 추가
+  - [x] WU-5: compose 재기동 후 Prometheus targets/rules, Kibana/Elasticsearch 로그 수집 확인
+- 메모/이슈:
+  - Prometheus targets 확인 결과 `api/worker/kafka_exporter/redis_exporter/postgres_exporter` 모두 `up`
+  - `worker_job_processing_seconds_bucket`는 워커 측 해당 metric이 존재할 때 `WorkerProcessingTimeHigh` 알람이 실측 동작
+
+### [Task-20260310-07] DB 마이그레이션 체계 도입
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): Job/Event 스키마를 Alembic 기반으로 전환하고 compose 환경에서 적용/검증 가능하게 만든다.
+- 작업 단위:
+  - [x] WU-1: Alembic 초기 설정 파일(`alembic.ini`, `alembic/env.py`, `script.py.mako`) 추가
+  - [x] WU-2: Job/Event 기준 initial migration(`20260310_0001`) 생성
+  - [x] WU-3: 앱/워커 시작 시 `create_all` 제거
+  - [x] WU-4: compose에 `migrate` 서비스 추가 및 `depends_on: service_completed_successfully` 적용
+  - [x] WU-5: README에 migration 적용/롤백/초기화 절차 추가
+  - [x] WU-6: `docker compose up -d --build migrate` + `alembic_version` 조회로 적용 검증
+- 메모/이슈:
+  - Docker 이미지에 Alembic 파일이 포함되도록 `Dockerfile`에 `COPY alembic/`, `COPY alembic.ini` 추가
+  - 기존 create_all 기반 DB가 이미 존재하는 환경은 `alembic stamp head` 또는 DB 재초기화 후 적용 권장
+
+### [Task-20260310-08] API/Worker 통합 테스트 보강
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 핵심 비동기 처리 흐름과 멱등성/상태 전이를 자동 테스트로 검증한다.
+- 작업 단위:
+  - [x] WU-1: POST /jobs 정상 생성 테스트 추가
+  - [x] WU-2: GET /jobs/{job_id} 상태 조회 테스트 추가
+  - [x] WU-3: 동일 Idempotency-Key 중복 요청 테스트 추가
+  - [x] WU-4: Worker consume 후 상태 전이(PENDING → PROCESSING → SUCCESS) 테스트 추가
+  - [x] WU-5: 실패 시 FAILED 반영 테스트 추가
+  - [x] WU-6: 중복 consume 방어 테스트 추가
+- 메모/이슈:
+  - 외부 인프라 의존을 줄이기 위해 `sqlite+aiosqlite` 기반 통합 테스트로 구성
+  - 실행 검증: `uv run --extra dev pytest -q tests/test_api_worker_integration.py tests/test_event_envelope.py` (`7 passed`)
+
+### [Task-20260310-09] CI 검증 파이프라인 추가
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 테스트와 Alembic 마이그레이션 검증이 CI에서 자동 수행되도록 구성한다.
+- 작업 단위:
+  - [x] WU-1: CI workflow 파일 추가
+  - [x] WU-2: pytest 실행 단계 추가
+  - [x] WU-3: `alembic upgrade head` 검증 단계 추가
+  - [x] WU-4: migration 누락/스키마 드리프트 방지 체크(`alembic check`) 추가
+  - [x] WU-5: README에 CI 검증 항목 반영
+- 메모/이슈:
+  - CI 최소 기준: `pytest -q` + `alembic upgrade head` + `alembic check`
+  - Postgres service container 기반으로 migration 검증 수행
+
+### [Task-20260310-10] Readiness/운영 상태 점검 고도화
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 서비스 준비 상태를 실제 의존성 기준으로 판별할 수 있도록 readiness 체크를 고도화한다.
+- 작업 단위:
+  - [x] WU-1: DB readiness 체크 추가
+  - [x] WU-2: Redis readiness 체크 추가
+  - [x] WU-3: Kafka readiness 체크 추가
+  - [x] WU-4: `/health/ready` 응답 구조 개선
+  - [x] WU-5: compose/startup 순서와 readiness 관계 문서화
+- 메모/이슈:
+  - `/health/ready`는 dependency-aware 방식으로 전환되어 하나라도 실패 시 `503` 반환
+  - 실행 검증: `uv run --extra dev pytest -q tests/test_health_readiness.py tests/test_api_worker_integration.py tests/test_event_envelope.py` (`9 passed`)
+
+### [Task-20260310-11] A/B/C 확장 포인트 코드 구조화
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 현재 A 아키텍처 코드베이스에서 B/C 구조로 확장 가능한 역할 분리 포인트를 코드와 문서에 명시한다.
+- 작업 단위:
+  - [x] WU-1: worker role 인터페이스 정리
+  - [x] WU-2: inference/downstream 분리 포인트 추가
+  - [x] WU-3: topic 명 분리 가능 설정 추가
+  - [x] WU-4: 전환 기준(metric 기반) 문서화
+  - [x] WU-5: README/architecture 문서 업데이트
+- 메모/이슈:
+  - `WorkerRolePort` + `app.workers.roles`로 역할 분리 구조를 고정하고, 현재는 A 경로를 유지하기 위해 inference/downstream도 동일 처리 경로를 재사용
+  - 실행 검증: `uv run --extra dev pytest -q tests/test_worker_roles.py tests/test_health_readiness.py tests/test_api_worker_integration.py tests/test_event_envelope.py` (`12 passed`)
+
+### [Task-20260310-12] 장애 시나리오별 Runbook 문서화
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 주요 장애 시나리오별 예측 지표, 1차 대응, 복구, 후속조치를 문서화한다.
+- 작업 단위:
+  - [x] WU-1: Kafka lag 급증 시나리오 정리
+  - [x] WU-2: Worker 처리 지연 시나리오 정리
+  - [x] WU-3: DB latency 증가 시나리오 정리
+  - [x] WU-4: Redis 장애 시나리오 정리
+  - [x] WU-5: 후속 RCA/재발방지 절차 정리
+- 메모/이슈:
+  - `docs/incident_runbook_abctransition.md` 신규 문서로 시나리오별 `탐지 지표 -> 1차 대응 -> 복구 -> RCA` 표준화
+  - 각 시나리오에 A/B/C 전환 판단 기준을 연결해 운영 의사결정 근거를 명시
+
+### [Task-20260310-13] 부하 테스트 및 성능 지표 수집
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): 서비스 부하 상황에서 처리량과 지연을 측정하고 A/B/C 전환 판단 지표를 확보한다.
+- 작업 단위:
+  - [x] WU-1: k6 기반 부하 테스트 스크립트 작성
+  - [x] WU-2: 동시 사용자 10/30/50 테스트
+  - [x] WU-3: Grafana metrics 캡처(Prometheus query 기반 수치 캡처)
+  - [x] WU-4: Kafka lag / worker latency 분석
+  - [x] WU-5: 결과 문서화
+- 메모/이슈:
+  - 스크립트: `tests/perf/jobs_load_test.js`, 결과 JSON: `reports/perf/k6_vus10|30|50.json`
+  - 보고서: `docs/perf_test_report_20260310.md` (k6 수치 + Prometheus 지표 + A/B/C 전환 판단 포함)
