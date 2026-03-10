@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 from time import perf_counter
 from typing import Any
 
@@ -8,6 +9,7 @@ from app.core.metrics import (
     INFERENCE_ACTIVE_JOBS,
     INFERENCE_PROCESSING_SECONDS,
     INFERENCE_SEMAPHORE_WAIT_SECONDS,
+    INFERENCE_SIMULATED_FAILURE_TOTAL,
     INFERENCE_SIMULATED_GPU_UTILIZATION,
 )
 from app.ports.task_processor import TaskProcessorPort
@@ -20,10 +22,12 @@ class GpuInferenceSimulator(TaskProcessorPort):
         max_concurrency: int,
         base_latency_ms: int,
         simulated_gpu_utilization: float,
+        failure_rate: float,
     ) -> None:
         self._semaphore = asyncio.Semaphore(max(1, max_concurrency))
         self._base_latency_ms = max(1, base_latency_ms)
         self._simulated_gpu_utilization = min(max(simulated_gpu_utilization, 0.0), 1.0)
+        self._failure_rate = min(max(failure_rate, 0.0), 1.0)
 
     async def process(self, payload: dict[str, Any]) -> dict[str, Any]:
         wait_started = perf_counter()
@@ -37,6 +41,14 @@ class GpuInferenceSimulator(TaskProcessorPort):
                 override_ms = payload.get("options", {}).get("simulate_inference_ms")
                 latency_ms = int(override_ms) if isinstance(override_ms, (int, float)) else self._base_latency_ms
                 await asyncio.sleep(max(1, latency_ms) / 1000)
+                override_failure_rate = payload.get("options", {}).get("simulate_inference_failure_rate")
+                failure_rate = (
+                    float(override_failure_rate) if isinstance(override_failure_rate, (int, float)) else self._failure_rate
+                )
+                failure_rate = min(max(failure_rate, 0.0), 1.0)
+                if random.random() < failure_rate:
+                    INFERENCE_SIMULATED_FAILURE_TOTAL.inc()
+                    raise RuntimeError("simulated inference failure")
 
                 content = payload.get("input", {}).get("content", "")
                 return {

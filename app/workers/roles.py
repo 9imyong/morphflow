@@ -8,8 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.cache.redis_idempotency import RedisIdempotencyStore
 from app.adapters.processing.downstream_dummy import DownstreamDummyProcessor
-from app.adapters.processing.dummy import DummyTaskProcessor
-from app.adapters.processing.gpu_simulator import GpuInferenceSimulator
+from app.adapters.processing.factory import build_primary_processor
 from app.application.pipeline_services import DownstreamPipelineService, InferencePipelineService
 from app.application.worker_service import WorkerService
 from app.core.config import Settings
@@ -67,7 +66,7 @@ def build_worker_role(
                 ttl_seconds=settings.idempotency_ttl_seconds,
                 processing_ttl_seconds=settings.worker_processing_ttl_seconds,
             ),
-            processor=DummyTaskProcessor(),
+            processor=build_primary_processor(settings),
         )
         return UnifiedWorkerRole(service)
     if settings.worker_role == "inference":
@@ -79,11 +78,7 @@ def build_worker_role(
                     ttl_seconds=settings.idempotency_ttl_seconds,
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
-                processor=GpuInferenceSimulator(
-                    max_concurrency=settings.inference_max_concurrency,
-                    base_latency_ms=settings.inference_simulated_latency_ms,
-                    simulated_gpu_utilization=settings.inference_simulated_gpu_utilization,
-                ),
+                processor=build_primary_processor(settings),
                 publisher=publisher,
                 downstream_topic=settings.kafka_downstream_topic,
             )
@@ -95,11 +90,7 @@ def build_worker_role(
                     ttl_seconds=settings.idempotency_ttl_seconds,
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
-                processor=GpuInferenceSimulator(
-                    max_concurrency=settings.inference_max_concurrency,
-                    base_latency_ms=settings.inference_simulated_latency_ms,
-                    simulated_gpu_utilization=settings.inference_simulated_gpu_utilization,
-                ),
+                processor=build_primary_processor(settings),
             )
         return InferenceWorkerRole(service)
     if settings.worker_role == "downstream":
@@ -116,7 +107,7 @@ def build_worker_role(
                     ttl_seconds=settings.idempotency_ttl_seconds,
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
-                processor=DummyTaskProcessor(),
+                processor=build_primary_processor(settings),
             )
         return DownstreamWorkerRole(service)
 
@@ -128,7 +119,7 @@ def build_worker_role(
             ttl_seconds=settings.idempotency_ttl_seconds,
             processing_ttl_seconds=settings.worker_processing_ttl_seconds,
         ),
-        processor=DummyTaskProcessor(),
+        processor=build_primary_processor(settings),
     )
     return UnifiedWorkerRole(service)
 

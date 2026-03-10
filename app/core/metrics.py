@@ -13,6 +13,10 @@ INFERENCE_ACTIVE_JOBS = Gauge("inference_active_jobs", "In-flight inference jobs
 INFERENCE_SIMULATED_GPU_UTILIZATION = Gauge(
     "inference_simulated_gpu_utilization", "Simulated GPU utilization (0.0~1.0)"
 )
+INFERENCE_SIMULATED_FAILURE_TOTAL = Counter(
+    "inference_simulated_failure_total",
+    "Number of simulated inference failures",
+)
 DOWNSTREAM_PROCESSING_SECONDS = Histogram("downstream_processing_seconds", "Downstream stage duration")
 DOWNSTREAM_EVENT_PUBLISHED_TOTAL = Counter("downstream_events_published_total", "Downstream events published")
 DOWNSTREAM_SUCCESS_TOTAL = Counter("downstream_success_total", "Downstream successful completions")

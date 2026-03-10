@@ -20,9 +20,11 @@ class Settings(BaseSettings):
     kafka_dlq_topic: str = "dlq-topic"
     kafka_downstream_topic: str = "downstream-topic"
     worker_role: Literal["unified", "inference", "downstream"] = "unified"
+    worker_processor_backend: Literal["simulator", "dummy"] = "simulator"
     inference_max_concurrency: int = 2
     inference_simulated_latency_ms: int = 700
     inference_simulated_gpu_utilization: float = 0.8
+    inference_simulated_failure_rate: float = 0.0
     downstream_simulated_latency_ms: int = 300
     retry_max_count: int = 3
     retry_backoff_seconds: float = 1.0

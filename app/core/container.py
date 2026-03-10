@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.adapters.cache.redis_idempotency import RedisIdempotencyStore
 from app.adapters.messaging.kafka import KafkaEventPublisher
-from app.adapters.processing.dummy import DummyTaskProcessor
+from app.adapters.processing.factory import build_primary_processor
 from app.application.job_service import JobService
 from app.application.worker_service import WorkerService
 from app.core.config import Settings
@@ -44,5 +44,5 @@ class AppContainer:
                 ttl_seconds=self.settings.idempotency_ttl_seconds,
                 processing_ttl_seconds=self.settings.worker_processing_ttl_seconds,
             ),
-            processor=DummyTaskProcessor(),
+            processor=build_primary_processor(self.settings),
         )
