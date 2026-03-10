@@ -1,4 +1,15 @@
 services:
+  migrate:
+    build:
+      context: .
+    command: alembic upgrade head
+    env_file:
+      - env/.env.prod
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -9,6 +20,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -24,6 +37,8 @@ services:
       - env/.env.prod
     restart: unless-stopped
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -36,12 +51,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: fault_monitoring
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fault_monitoring"]
+      test: ["CMD-SHELL", "pg_isready -U app -d fault_monitoring"]
       interval: 5s
       timeout: 5s
       retries: 10

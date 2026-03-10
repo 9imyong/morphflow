@@ -12,6 +12,8 @@ RUN apt-get update \
 
 COPY app /service/app
 COPY deploy /service/deploy
+COPY alembic /service/alembic
+COPY alembic.ini /service/alembic.ini
 COPY pyproject.toml README.md /service/
 
 RUN pip install --upgrade pip && pip install .

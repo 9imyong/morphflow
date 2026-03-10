@@ -7,7 +7,7 @@ from redis.asyncio import from_url
 from app.adapters.messaging.kafka import KafkaEventPublisher
 from app.core.config import get_settings
 from app.core.container import AppContainer
-from app.core.database import create_engine, create_session_factory, init_db
+from app.core.database import create_engine, create_session_factory
 from app.core.logging import configure_logging
 
 
@@ -17,7 +17,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
-    await init_db(engine)
     redis = from_url(settings.redis_url, decode_responses=True)
     publisher = KafkaEventPublisher(settings.kafka_bootstrap_servers)
     await publisher.start()

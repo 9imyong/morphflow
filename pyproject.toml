@@ -9,6 +9,7 @@ description = "Architecture A scaffold for a transition-ready fault monitoring s
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic==1.16.5",
   "aiokafka==0.12.0",
   "asyncpg==0.30.0",
   "fastapi==0.116.1",
@@ -22,8 +23,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "aiosqlite==0.21.0",
   "httpx==0.28.1",
   "pytest==8.4.2",
+  "pytest-asyncio==1.2.0",
 ]
 
 [tool.setuptools.packages.find]
