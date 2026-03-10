@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.cache.redis_idempotency import RedisIdempotencyStore
 from app.adapters.processing.dummy import DummyTaskProcessor
+from app.adapters.processing.gpu_simulator import GpuInferenceSimulator
 from app.application.worker_service import WorkerService
 from app.core.config import Settings
 from app.ports.worker_role import WorkerRolePort
@@ -21,8 +22,8 @@ class UnifiedWorkerRole(WorkerRolePort):
     def __init__(self, service: WorkerService) -> None:
         self._service = service
 
-    async def handle_event(self, event: dict) -> None:
-        await self._service.handle_event(event)
+    async def handle_event(self, event: dict) -> tuple[bool, str | None]:
+        return await self._service.handle_event(event)
 
 
 class InferenceWorkerRole(WorkerRolePort):
@@ -31,9 +32,9 @@ class InferenceWorkerRole(WorkerRolePort):
     def __init__(self, service: WorkerService) -> None:
         self._service = service
 
-    async def handle_event(self, event: dict) -> None:
+    async def handle_event(self, event: dict) -> tuple[bool, str | None]:
         # Phase A/B bridge: current implementation reuses unified execution path.
-        await self._service.handle_event(event)
+        return await self._service.handle_event(event)
 
 
 class DownstreamWorkerRole(WorkerRolePort):
@@ -42,9 +43,9 @@ class DownstreamWorkerRole(WorkerRolePort):
     def __init__(self, service: WorkerService) -> None:
         self._service = service
 
-    async def handle_event(self, event: dict) -> None:
+    async def handle_event(self, event: dict) -> tuple[bool, str | None]:
         # Phase A/C bridge: current implementation reuses unified execution path.
-        await self._service.handle_event(event)
+        return await self._service.handle_event(event)
 
 
 def build_worker_role(
@@ -53,6 +54,15 @@ def build_worker_role(
     session_factory: async_sessionmaker[AsyncSession],
     redis: Redis,
 ) -> WorkerRolePort:
+    if settings.worker_role == "inference":
+        processor = GpuInferenceSimulator(
+            max_concurrency=settings.inference_max_concurrency,
+            base_latency_ms=settings.inference_simulated_latency_ms,
+            simulated_gpu_utilization=settings.inference_simulated_gpu_utilization,
+        )
+    else:
+        processor = DummyTaskProcessor()
+
     service = WorkerService(
         session_factory=session_factory,
         idempotency_store=RedisIdempotencyStore(
@@ -60,7 +70,7 @@ def build_worker_role(
             ttl_seconds=settings.idempotency_ttl_seconds,
             processing_ttl_seconds=settings.worker_processing_ttl_seconds,
         ),
-        processor=DummyTaskProcessor(),
+        processor=processor,
     )
 
     if settings.worker_role == "unified":

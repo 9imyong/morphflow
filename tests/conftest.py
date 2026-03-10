@@ -39,16 +39,18 @@ class InMemoryIdempotencyStore(IdempotencyPort):
         return True
 
     async def complete_job_processing(self, job_id: str, success: bool) -> None:
-        status = "COMPLETED" if success else "FAILED"
-        self._job_records[job_id] = IdempotencyRecord(key=job_id, job_id=job_id, status=status)
+        if success:
+            self._job_records[job_id] = IdempotencyRecord(key=job_id, job_id=job_id, status="COMPLETED")
+            return
+        self._job_records.pop(job_id, None)
 
 
 class CapturingPublisher(EventPublisherPort):
     def __init__(self) -> None:
-        self.published: list[tuple[str, dict]] = []
+        self.published: list[tuple[str, dict, dict[str, str] | None]] = []
 
-    async def publish(self, topic: str, event: dict) -> None:
-        self.published.append((topic, event))
+    async def publish(self, topic: str, event: dict, headers: dict[str, str] | None = None) -> None:
+        self.published.append((topic, event, headers))
 
 
 class SuccessProcessor(TaskProcessorPort):

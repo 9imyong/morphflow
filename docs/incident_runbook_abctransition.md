@@ -126,6 +126,33 @@ A/B/C 전환 판단:
 
 ---
 
+### 3.5 Retry / DLQ 급증
+
+증상/예측 지표:
+- `increase(dlq_messages_total[5m]) > 0` 지속 발생
+- `increase(retry_published_total[5m]) / increase(retry_failure_total[5m])` 비율 악화
+- 동일 `error-reason` 헤더가 반복되는 DLQ 적재
+
+1차 대응:
+1. 최근 배포/설정 변경과 외부 의존성 장애를 우선 확인
+2. DLQ 메시지의 `original-topic`, `retry-count`, `error-reason` 헤더로 실패 유형 분류
+3. 고정 오류(스키마 불일치/필수 필드 누락)는 즉시 재처리 중지 후 원인 수정
+
+복구 절차:
+1. 원인 수정 후 샘플 메시지 1건 replay로 정상 처리 확인
+2. 배치 replay 전 `retry_max_count`, backoff 설정 적정성 점검
+3. replay 이후 lag, 실패율, DLQ 증가율 안정화 확인
+
+후속 조치:
+- 오류 유형별 DLQ 분류 정책(스키마/의존성/타임아웃) 추가
+- 반복 오류는 producer validation 또는 스키마 레지스트리 도입 검토
+
+A/B/C 전환 판단:
+- GPU 추론 구간 오류/지연이 주원인이면 **A -> B**
+- 다운스트림 저장/연동 실패가 주원인이면 **A -> C**
+
+---
+
 ## 4. RCA/재발방지 표준 절차
 
 1. 사고 타임라인 정리

@@ -117,6 +117,8 @@ CI executes the minimum verification set:
 
 - k6 load script: `tests/perf/jobs_load_test.js`
 - latest report: `docs/perf_test_report_20260310.md`
+- B-mode validation report: `docs/perf_test_report_bmode_20260310.md`
+- B-mode compose override: `deploy/docker-compose.bmode.override.yml`
 
 ## E2E Verification Example
 
@@ -151,6 +153,54 @@ Operational checks:
 3. job transitions `PENDING -> PROCESSING -> SUCCESS`
 4. `GET /jobs/{job_id}` returns final result
 5. duplicate request with same `Idempotency-Key` returns same `job_id`
+
+## Retry / DLQ Strategy
+
+Worker consumer behavior:
+- consumes primary topic (`request-topic` or role topic) and `retry-topic`
+- on transient processing failure, republishes same payload to `retry-topic`
+- when retry count exceeds `RETRY_MAX_COUNT`, publishes same payload to `dlq-topic`
+
+Headers used:
+- `retry-count`
+- `original-topic`
+- `error-reason`
+
+Retry configuration (`env/.env.dev`, `env/.env.prod`):
+- `KAFKA_RETRY_TOPIC`
+- `KAFKA_DLQ_TOPIC`
+- `RETRY_MAX_COUNT`
+- `RETRY_BACKOFF_SECONDS`
+- `RETRY_BACKOFF_MULTIPLIER`
+- `RETRY_BACKOFF_MAX_SECONDS`
+
+Prometheus metrics:
+- `retry_published_total`
+- `retry_failure_total`
+- `dlq_messages_total`
+
+DLQ inspect/replay example:
+
+```bash
+# 1) Inspect DLQ payloads
+docker exec -it $(docker compose -f docker-compose.dev.yml ps -q kafka) \
+  /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server kafka:9092 \
+  --topic dlq-topic \
+  --from-beginning
+
+# 2) After root-cause fix, replay selected payload to request-topic
+docker exec -i $(docker compose -f docker-compose.dev.yml ps -q kafka) \
+  /opt/kafka/bin/kafka-console-producer.sh \
+  --bootstrap-server kafka:9092 \
+  --topic request-topic
+```
+
+Operator flow:
+1. identify root cause from `error-reason` and worker logs
+2. fix issue (code/config/dependency)
+3. replay selected DLQ messages to primary topic
+4. verify `dlq_messages_total` trend stabilizes
 
 ## Observability Stack
 
@@ -191,7 +241,7 @@ Exporter coverage in observability compose:
 - `app.ports.task_processor.TaskProcessorPort` keeps inference logic replaceable.
 - `app.application.worker_service.WorkerService` separates job state management from processing details.
 - `app.ports.worker_role.WorkerRolePort` and `app.workers.roles` define role-oriented expansion points.
-- `app.domain.events.EventType` and Kafka topic settings keep room for `downstream-topic`, retry, and DLQ expansion.
+- `app.domain.events.EventType` and Kafka topic settings support `downstream-topic`, `retry-topic`, and `dlq-topic`.
 - `app.domain.models.JobStatus` already reserves comments for future states such as `INFERENCE_DONE` and `PARTIAL_SUCCESS`.
 
 Worker role/topic expansion settings:

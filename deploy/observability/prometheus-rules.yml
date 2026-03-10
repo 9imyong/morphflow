@@ -56,13 +56,31 @@ groups:
           description: "Consumer lag exceeded 100 for 5 minutes; consider worker scaling."
 
       - alert: WorkerProcessingTimeHigh
-        expr: histogram_quantile(0.95, sum(rate(worker_job_processing_seconds_bucket[5m])) by (le)) > 5
+        expr: histogram_quantile(0.95, sum(rate(job_processing_seconds_bucket[5m])) by (le)) > 5
         for: 10m
         labels:
           severity: warning
         annotations:
           summary: "Worker processing time increased"
           description: "Worker p95 processing time is high; Architecture B transition may be needed."
+
+      - alert: InferenceConcurrencySaturated
+        expr: max(inference_active_jobs) >= 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Inference worker concurrency saturated"
+          description: "Inference active jobs are at concurrency limit; consider scaling inference workers."
+
+      - alert: DlqMessagesDetected
+        expr: increase(dlq_messages_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DLQ messages detected"
+          description: "Messages are being moved to DLQ; inspect error-reason headers and replay policy."
 
       - alert: PostgresResponseSlow
         expr: rate(pg_stat_database_blk_read_time{datname="fault_monitoring"}[5m]) > 50

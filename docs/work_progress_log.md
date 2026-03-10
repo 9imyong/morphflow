@@ -286,3 +286,39 @@
 - 메모/이슈:
   - 스크립트: `tests/perf/jobs_load_test.js`, 결과 JSON: `reports/perf/k6_vus10|30|50.json`
   - 보고서: `docs/perf_test_report_20260310.md` (k6 수치 + Prometheus 지표 + A/B/C 전환 판단 포함)
+
+### [Task-20260310-14] GPU 추론 최소 연결 및 B 아키텍처 검증
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): inference worker를 실제 GPU 추론 또는 GPU inference simulator와 연결하여 B 아키텍처 병목을 검증 가능한 상태로 만든다.
+- 작업 단위:
+  - [x] WU-1: inference-topic 및 inference worker 실제 동작 경로 구현
+  - [x] WU-2: DummyTaskProcessor 대신 GPU inference simulator 추가
+  - [x] WU-3: semaphore / concurrency 설정 적용
+  - [x] WU-4: GPU util / worker latency / Kafka lag 관측 metrics 연결
+  - [x] WU-5: 부하 테스트 재실행 및 결과 문서화
+- 메모/이슈:
+  - B 모드 override compose: `deploy/docker-compose.bmode.override.yml`
+  - 보고서: `docs/perf_test_report_bmode_20260310.md`, 결과 JSON: `reports/perf/k6_bmode_vus10|30|50.json`
+  - B 모드 50VU에서 실패율(약 0.35%) 및 inference lag 누적 재현으로 병목 검증 가능 상태 확인
+
+### [Task-20260310-15] Retry / DLQ 전략 구현
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): Kafka 기반 EDA 구조에서 실패 이벤트의 무한 재처리를 방지하도록 retry topic 및 DLQ 전략을 구현한다.
+- 작업 단위:
+  - [x] WU-1: `retry-topic`, `dlq-topic` 설정 및 env 변수 정의
+  - [x] WU-2: `retry-count`/`original-topic`/`error-reason` header 기반 재시도 로직 구현
+  - [x] WU-3: exponential backoff 정책 및 retry publish 구현
+  - [x] WU-4: retry 초과 이벤트의 DLQ 전송 및 원본 payload 유지
+  - [x] WU-5: `retry_published_total`, `retry_failure_total`, `dlq_messages_total` metric/alert 반영
+  - [x] WU-6: README/working spec/runbook에 DLQ 운영 및 replay 절차 반영
+- 메모/이슈:
+  - worker는 기본 consume topic + `retry-topic`을 함께 구독
+  - 실패 시 idempotency lock은 해제해 retry 처리 가능하도록 조정

@@ -26,8 +26,11 @@ class KafkaEventPublisher(EventPublisherPort):
             await self._producer.stop()
             self._started = False
 
-    async def publish(self, topic: str, event: dict) -> None:
-        await self._producer.send_and_wait(topic, event)
+    async def publish(self, topic: str, event: dict, headers: dict[str, str] | None = None) -> None:
+        kafka_headers = None
+        if headers:
+            kafka_headers = [(key, value.encode("utf-8")) for key, value in headers.items()]
+        await self._producer.send_and_wait(topic, event, headers=kafka_headers)
         JOB_EVENT_PUBLISHED_TOTAL.inc()
 
     async def readiness(self) -> tuple[bool, str]:

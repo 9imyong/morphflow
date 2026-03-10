@@ -24,13 +24,13 @@ class WorkerService:
         self.idempotency_store = idempotency_store
         self.processor = processor
 
-    async def handle_event(self, event: dict) -> None:
+    async def handle_event(self, event: dict) -> tuple[bool, str | None]:
         job_id = event["job_id"]
         trace_id = event["trace_id"]
 
         reserved = await self.idempotency_store.reserve_job_processing(job_id)
         if not reserved:
-            return
+            return True, None
 
         started_at = perf_counter()
         try:
@@ -69,6 +69,7 @@ class WorkerService:
 
             JOB_SUCCESS_TOTAL.inc()
             await self.idempotency_store.complete_job_processing(job_id, success=True)
+            return True, None
         except Exception as exc:
             async with self.session_factory() as session:
                 job_repository = SqlAlchemyJobRepository(session)
@@ -86,5 +87,6 @@ class WorkerService:
                 await session.commit()
             JOB_FAILURE_TOTAL.inc()
             await self.idempotency_store.complete_job_processing(job_id, success=False)
+            return False, str(exc)
         finally:
             JOB_PROCESSING_SECONDS.observe(perf_counter() - started_at)

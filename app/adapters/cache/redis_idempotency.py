@@ -37,8 +37,12 @@ class RedisIdempotencyStore(IdempotencyPort):
         )
 
     async def complete_job_processing(self, job_id: str, success: bool) -> None:
-        status = "COMPLETED" if success else "FAILED"
-        value = json.dumps({"status": status, "job_id": job_id})
+        if not success:
+            # Failed attempts should be retriable. Keep only successful completion as a hard lock.
+            await self.redis.delete(self._job_key(job_id))
+            return
+
+        value = json.dumps({"status": "COMPLETED", "job_id": job_id})
         await self.redis.set(self._job_key(job_id), value, ex=self.ttl_seconds)
 
     @staticmethod

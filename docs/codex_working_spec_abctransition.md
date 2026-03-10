@@ -801,6 +801,7 @@ Observability는 단순 모니터링이 아니라, A/B/C 아키텍처 전환 판
 - Kafka consumer lag
 - Redis exporter
 - Postgres exporter
+- Retry / DLQ metrics (`retry_published_total`, `retry_failure_total`, `dlq_messages_total`)
 
 ### Logs 수집 대상
 - Fluent Bit로 컨테이너 stdout 로그 수집
@@ -815,6 +816,7 @@ Observability는 단순 모니터링이 아니라, A/B/C 아키텍처 전환 판
 ### 운영 원칙
 - API/Worker/Sink(DB, Redis, Kafka) 지표를 하나의 대시보드에서 교차 확인한다.
 - 임계치(예: lag, p95 latency, 오류율)를 기준으로 전환 판단 룰을 점진적으로 자동화한다.
+- Retry loop 방지를 위해 `retry-count` 헤더와 `RETRY_MAX_COUNT`를 강제하고, 초과 이벤트는 `dlq-topic`으로 격리한다.
 6. 코드 구조는 이후 unified worker를 inference worker와 downstream worker로 분리 배포할 수 있도록 모듈화한다.
 7. config/env 기반으로 아키텍처 모드 또는 feature flag 전환이 가능해야 한다.
 8. Prometheus metrics, structured logging, trace_id propagation을 고려한다.
