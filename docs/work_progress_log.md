@@ -342,3 +342,22 @@
   - `ARCHITECTURE_MODE=C|BC`에서 API는 `inference-topic`으로 발행하고, inference worker는 `downstream-topic`으로 전달
   - downstream worker는 후처리 완료 시 job 결과를 `inference + downstream` 구조로 저장
   - compose 실행용 override: `deploy/docker-compose.cmode.override.yml`
+
+### [Task-20260310-17] 운영/아키텍처 최종 정리 및 문서 패키징
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-10
+- 목표(DoD): A/B/C 아키텍처, Retry/DLQ, Observability를 운영 관점에서 종합 정리한 최종 문서 패키지를 완성한다.
+- 작업 단위:
+  - [x] WU-1: A/B/C 아키텍처 비교(흐름/병목/전환 기준) 정리
+  - [x] WU-2: Observability 구조(Prometheus/Grafana/EFK/exporter/alert) 문서화
+  - [x] WU-3: Retry/DLQ 흐름 다이어그램(`request/retry/dlq-topic`) 추가
+  - [x] WU-4: A/B/C 성능 비교 요약 문서 생성
+  - [x] WU-5: 운영 Runbook 핵심 대응 절차 요약 정리
+  - [x] WU-6: README 실행/모드/observability/테스트 섹션 최종 재정리
+- 메모/이슈:
+  - 최종 패키지 문서: `docs/architecture_operations_package_20260310.md`
+  - 성능 요약 문서: `docs/perf_summary_abc_20260310.md`
+  - C 모드는 현재 시나리오 검증까지 완료, k6 부하 실측은 후속 태스크로 권장

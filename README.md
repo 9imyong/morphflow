@@ -1,40 +1,44 @@
 # Fault Monitoring System
 
-Architecture A minimum runnable scaffold for an event-driven job processing service. The current build focuses on:
+Kafka 기반 EDA AI inference pipeline skeleton.
+현재 A/B/C 아키텍처 전환 구조, Retry/DLQ, Observability(EFK 포함)까지 반영된 상태다.
 
-- FastAPI API for job creation and lookup
-- PostgreSQL-backed job and event persistence
-- Redis idempotency for API and worker duplicate protection
-- Kafka `request-topic` producer and consumer
-- Dummy processing service behind a replaceable processor interface
-- Liveness, readiness, and Prometheus metrics endpoints
-- Docker Compose development stack
+## 1. 빠른 시작
 
-## Directory Layout
-
-```text
-app/
-  api/
-  application/
-  domain/
-  ports/
-  adapters/
-  workers/
-  core/
-deploy/
-docs/
-tests/
-```
-
-## Run (Development)
-
+기본(A 모드):
 ```bash
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev up --build
+docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d --build
 ```
 
-If local ports conflict, adjust `*_HOST_PORT` values in `env/.env.dev`.
+Observability:
+```bash
+docker compose -f deploy/observability-compose.yml up -d
+```
 
-API endpoints:
+## 2. 아키텍처 모드 실행
+
+### A 모드 (기본)
+- API -> `request-topic` -> unified worker
+- 실행:
+```bash
+docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d --build
+```
+
+### B 모드 (추론 분리)
+- API -> `inference-topic` -> inference worker
+- 실행:
+```bash
+docker compose -f docker-compose.dev.yml -f deploy/docker-compose.bmode.override.yml --env-file env/.env.dev up -d --build
+```
+
+### C 모드 (downstream 분리)
+- API -> `inference-topic` -> inference worker -> `downstream-topic` -> downstream worker
+- 실행:
+```bash
+docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override.yml --env-file env/.env.dev up -d --build
+```
+
+## 3. 핵심 엔드포인트
 
 - `POST /jobs`
 - `GET /jobs/{job_id}`
@@ -42,256 +46,94 @@ API endpoints:
 - `GET /health/ready`
 - `GET /metrics`
 
-Worker metrics are exposed on port `9000`.
+## 4. Retry / DLQ 운영
 
-## Readiness (Dependency-Aware)
+### 토픽
+- `request-topic`
+- `retry-topic`
+- `dlq-topic`
 
-`GET /health/ready` checks real dependencies and returns:
-- `200 OK`: all dependencies are ready
-- `503 Service Unavailable`: at least one dependency is not ready
-
-Checked dependencies:
-1. Database (`SELECT 1`)
-2. Redis (`PING`)
-3. Kafka producer bootstrap readiness
-
-Response shape:
-- `status`: `ok` or `degraded`
-- `dependencies`: per dependency `{status, detail}`
-- `details`: compact map (`ok`/`error`) for quick checks
-
-Startup/readiness relation:
-1. Compose startup order (`depends_on`) controls launch sequencing only.
-2. Real traffic readiness must rely on `/health/ready` because dependencies may still be warming up after container start.
-3. In this project, `migrate` runs first, then `api/worker` start; `/health/ready` is the runtime gate for DB/Redis/Kafka usability.
-
-## DB Migration (Alembic)
-
-Migration files:
-- `alembic/env.py`
-- `alembic/versions/*.py`
-
-Apply latest migration:
-
-```bash
-alembic upgrade head
-```
-
-Rollback one revision:
-
-```bash
-alembic downgrade -1
-```
-
-Compose-based apply (recommended):
-
-```bash
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d migrate
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d
-```
-
-Reset and re-apply (development only):
-
-```bash
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev down -v
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d postgres
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev run --rm migrate
-```
-
-## CI Validation
-
-GitHub Actions workflow:
-- `.github/workflows/ci.yml`
-
-CI executes the minimum verification set:
-1. `pytest -q`
-2. `alembic upgrade head`
-3. `alembic check` (detects missing migration/schema drift)
-
-## Incident Runbook
-
-- Scenario-based runbook for Kafka lag / worker delay / DB latency / Redis outage:
-  - `docs/incident_runbook_abctransition.md`
-
-## Load Test
-
-- k6 load script: `tests/perf/jobs_load_test.js`
-- latest report: `docs/perf_test_report_20260310.md`
-- B-mode validation report: `docs/perf_test_report_bmode_20260310.md`
-- B-mode compose override: `deploy/docker-compose.bmode.override.yml`
-
-## E2E Verification Example
-
-Create a job:
-
-```bash
-curl -X POST http://localhost:8000/jobs \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: sample-key-1" \
-  -d '{"input":{"type":"text","content":"sample request"},"options":{"priority":"normal"}}'
-```
-
-Fetch a job:
-
-```bash
-curl http://localhost:8000/jobs/<job_id>
-```
-
-Duplicate request test (same `Idempotency-Key` should return the same `job_id`):
-
-```bash
-curl -X POST http://localhost:8000/jobs \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: sample-key-1" \
-  -d '{"input":{"type":"text","content":"sample request"},"options":{"priority":"normal"}}'
-```
-
-Operational checks:
-
-1. `POST /jobs` returns `202` and initial status `PENDING`
-2. worker consumes Kafka `request-topic`
-3. job transitions `PENDING -> PROCESSING -> SUCCESS`
-4. `GET /jobs/{job_id}` returns final result
-5. duplicate request with same `Idempotency-Key` returns same `job_id`
-
-## Retry / DLQ Strategy
-
-Worker consumer behavior:
-- consumes primary topic (`request-topic` or role topic) and `retry-topic`
-- on transient processing failure, republishes same payload to `retry-topic`
-- when retry count exceeds `RETRY_MAX_COUNT`, publishes same payload to `dlq-topic`
-
-Headers used:
+### 헤더
 - `retry-count`
 - `original-topic`
 - `error-reason`
 
-Retry configuration (`env/.env.dev`, `env/.env.prod`):
-- `KAFKA_RETRY_TOPIC`
-- `KAFKA_DLQ_TOPIC`
-- `RETRY_MAX_COUNT`
-- `RETRY_BACKOFF_SECONDS`
-- `RETRY_BACKOFF_MULTIPLIER`
-- `RETRY_BACKOFF_MAX_SECONDS`
+### 정책
+- retry backoff: exponential
+- `RETRY_MAX_COUNT` 초과 시 DLQ 전송
+- DLQ는 원본 payload 유지
 
-Prometheus metrics:
-- `retry_published_total`
-- `retry_failure_total`
-- `dlq_messages_total`
-
-DLQ inspect/replay example:
-
+### DLQ 확인/재처리
 ```bash
-# 1) Inspect DLQ payloads
+# DLQ 확인
 docker exec -it $(docker compose -f docker-compose.dev.yml ps -q kafka) \
   /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server kafka:9092 \
   --topic dlq-topic \
   --from-beginning
 
-# 2) After root-cause fix, replay selected payload to request-topic
+# 원인 수정 후 재주입
 docker exec -i $(docker compose -f docker-compose.dev.yml ps -q kafka) \
   /opt/kafka/bin/kafka-console-producer.sh \
   --bootstrap-server kafka:9092 \
   --topic request-topic
 ```
 
-Operator flow:
-1. identify root cause from `error-reason` and worker logs
-2. fix issue (code/config/dependency)
-3. replay selected DLQ messages to primary topic
-4. verify `dlq_messages_total` trend stabilizes
+## 5. Observability 구조
 
-## Observability Stack
+### 구성
+- Metrics: Prometheus
+- Dashboard: Grafana
+- Logs: Fluent Bit -> Elasticsearch -> Kibana (EFK)
+- Exporters: kafka/redis/postgres
 
-Start service stack first, then start observability stack:
-
-```bash
-docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d
-docker compose -f deploy/observability-compose.yml up -d
-```
-
-Endpoints:
-
+### 접속
 - Prometheus: `http://localhost:9091`
 - Grafana: `http://localhost:3000`
 - Elasticsearch: `http://localhost:9200`
 - Kibana: `http://localhost:5601`
 
-Prometheus target/alert checks:
-
+### 점검 명령
 ```bash
 curl -s http://localhost:9091/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 curl -s http://localhost:9091/api/v1/rules | jq '.data.groups[] | {group: .name, rules: [.rules[].name]}'
-```
-
-Kibana log check:
-
-```bash
 curl -s "http://localhost:9200/morphflow-*/_search?size=1&sort=@timestamp:desc" | jq '.hits.hits[0]._source'
 ```
 
-Exporter coverage in observability compose:
-- `kafka-exporter` for consumer lag metrics
-- `redis-exporter` for Redis metrics
-- `postgres-exporter` for PostgreSQL metrics
+## 6. 테스트 실행
 
-## Extension Points
+전체 핵심 테스트:
+```bash
+uv run --extra dev pytest -q
+```
 
-- `app.ports.task_processor.TaskProcessorPort` keeps inference logic replaceable.
-- `app.application.worker_service.WorkerService` separates job state management from processing details.
-- `app.ports.worker_role.WorkerRolePort` and `app.workers.roles` define role-oriented expansion points.
-- `app.domain.events.EventType` and Kafka topic settings support `downstream-topic`, `retry-topic`, and `dlq-topic`.
-- `app.domain.models.JobStatus` already reserves comments for future states such as `INFERENCE_DONE` and `PARTIAL_SUCCESS`.
-
-Worker role/topic expansion settings:
-- `WORKER_ROLE`: `unified` | `inference` | `downstream`
-- `KAFKA_REQUEST_TOPIC`
-- `KAFKA_INFERENCE_TOPIC`
-- `KAFKA_DOWNSTREAM_TOPIC`
-
-Current behavior:
-- `unified` consumes `KAFKA_REQUEST_TOPIC`
-- `inference` consumes `KAFKA_INFERENCE_TOPIC`
-- `downstream` consumes `KAFKA_DOWNSTREAM_TOPIC`
-
-`ARCHITECTURE_MODE=C|BC` behavior:
-1. API publishes to `KAFKA_INFERENCE_TOPIC`
-2. inference worker processes request and publishes `INFERENCE_COMPLETED` event to `KAFKA_DOWNSTREAM_TOPIC`
-3. downstream worker performs downstream dummy task and finalizes job as `SUCCESS`
-
-`ARCHITECTURE_MODE=A|B` keeps current direct completion behavior by role.
-
-Downstream tuning settings:
-- `DOWNSTREAM_SIMULATED_LATENCY_MS`
-
-Downstream metrics:
-- `downstream_processing_seconds`
-- `downstream_events_published_total`
-- `downstream_success_total`
-- `downstream_failure_total`
-
-## Notes
-
-- This version implements Architecture A only.
-- B mode splits inference processing to dedicated worker role.
-- C mode minimally implements inference -> downstream split with downstream dummy post-processing.
-
-## C Path Scenario Test
-
-Run scenario test for C architecture split:
-
+C 경로 시나리오 테스트:
 ```bash
 uv run --extra dev pytest -q tests/test_c_architecture_flow.py
 ```
 
-This test verifies:
-1. API path publishes to inference topic
-2. inference stage publishes downstream event
-3. downstream stage completes job (`PROCESSING -> SUCCESS`)
+## 7. 마이그레이션
 
-Run C mode in compose (inference worker + downstream worker):
-
+적용:
 ```bash
-docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override.yml --env-file env/.env.dev up -d --build
+alembic upgrade head
 ```
+
+롤백:
+```bash
+alembic downgrade -1
+```
+
+## 8. 운영 문서
+
+- 아키텍처/운영 최종 패키지:
+  - `docs/architecture_operations_package_20260310.md`
+- A/B/C 성능 요약:
+  - `docs/perf_summary_abc_20260310.md`
+- 상세 아키텍처 스펙:
+  - `docs/codex_working_spec_abctransition.md`
+- 장애 Runbook:
+  - `docs/incident_runbook_abctransition.md`
+- 작업 로그:
+  - `docs/work_progress_log.md`
+
