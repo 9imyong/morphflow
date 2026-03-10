@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+import logging
+
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.adapters.cache.redis_idempotency import RedisIdempotencyStore
+from app.adapters.processing.dummy import DummyTaskProcessor
+from app.application.worker_service import WorkerService
+from app.core.config import Settings
+from app.ports.worker_role import WorkerRolePort
+
+
+logger = logging.getLogger(__name__)
+
+
+class UnifiedWorkerRole(WorkerRolePort):
+    role_name = "unified"
+
+    def __init__(self, service: WorkerService) -> None:
+        self._service = service
+
+    async def handle_event(self, event: dict) -> None:
+        await self._service.handle_event(event)
+
+
+class InferenceWorkerRole(WorkerRolePort):
+    role_name = "inference"
+
+    def __init__(self, service: WorkerService) -> None:
+        self._service = service
+
+    async def handle_event(self, event: dict) -> None:
+        # Phase A/B bridge: current implementation reuses unified execution path.
+        await self._service.handle_event(event)
+
+
+class DownstreamWorkerRole(WorkerRolePort):
+    role_name = "downstream"
+
+    def __init__(self, service: WorkerService) -> None:
+        self._service = service
+
+    async def handle_event(self, event: dict) -> None:
+        # Phase A/C bridge: current implementation reuses unified execution path.
+        await self._service.handle_event(event)
+
+
+def build_worker_role(
+    *,
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+    redis: Redis,
+) -> WorkerRolePort:
+    service = WorkerService(
+        session_factory=session_factory,
+        idempotency_store=RedisIdempotencyStore(
+            redis=redis,
+            ttl_seconds=settings.idempotency_ttl_seconds,
+            processing_ttl_seconds=settings.worker_processing_ttl_seconds,
+        ),
+        processor=DummyTaskProcessor(),
+    )
+
+    if settings.worker_role == "unified":
+        return UnifiedWorkerRole(service)
+    if settings.worker_role == "inference":
+        return InferenceWorkerRole(service)
+    if settings.worker_role == "downstream":
+        return DownstreamWorkerRole(service)
+
+    logger.warning("Unknown worker_role=%s, fallback to unified", settings.worker_role)
+    return UnifiedWorkerRole(service)
+
+
+def resolve_worker_topic(settings: Settings) -> str:
+    if settings.worker_role == "unified":
+        return settings.kafka_request_topic
+    if settings.worker_role == "inference":
+        return settings.kafka_inference_topic
+    return settings.kafka_downstream_topic
+
+
+def resolve_worker_group_id(settings: Settings) -> str:
+    if settings.worker_role == "unified":
+        return "architecture-a-worker"
+    return f"architecture-a-worker-{settings.worker_role}"

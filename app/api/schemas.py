@@ -24,4 +24,5 @@ class JobDetailResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+    dependencies: dict[str, dict[str, str]]
     details: dict[str, str]

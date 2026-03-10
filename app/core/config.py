@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_request_topic: str = "request-topic"
+    kafka_inference_topic: str = "inference-topic"
+    kafka_downstream_topic: str = "downstream-topic"
+    worker_role: Literal["unified", "inference", "downstream"] = "unified"
     idempotency_ttl_seconds: int = 3600
     worker_processing_ttl_seconds: int = 1800
     log_level: str = "INFO"

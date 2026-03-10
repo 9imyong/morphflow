@@ -358,6 +358,54 @@ INFERENCE_DONE
 | status | 상태 |
 | retry_count | 재시도 횟수 |
 | last_error | 최근 오류 |
+
+---
+
+## 10. 코드 확장 포인트 (Task-20260310-11 반영)
+
+### 10.1 Worker Role 인터페이스
+- `app.ports.worker_role.WorkerRolePort`
+- `app.workers.roles`
+  - `UnifiedWorkerRole`
+  - `InferenceWorkerRole`
+  - `DownstreamWorkerRole`
+  - `build_worker_role(...)`
+
+현재는 A 아키텍처 동작을 깨지 않기 위해 inference/downstream role도 동일 처리 경로를 사용한다.
+즉, **실구현보다 역할 분리 구조를 먼저 고정**했다.
+
+### 10.2 Topic 분리 포인트
+- 설정 키:
+  - `WORKER_ROLE=unified|inference|downstream`
+  - `KAFKA_REQUEST_TOPIC`
+  - `KAFKA_INFERENCE_TOPIC`
+  - `KAFKA_DOWNSTREAM_TOPIC`
+- 런타임 매핑:
+  - `unified` -> request-topic
+  - `inference` -> inference-topic
+  - `downstream` -> downstream-topic
+
+### 10.3 전환 기준(메트릭 기반)
+아래 조건은 운영 데이터로 판단한다.
+
+1. A -> B(Inference 분리) 고려 조건
+   - `histogram_quantile(0.95, sum(rate(worker_job_processing_seconds_bucket[5m])) by (le))` 지속 상승
+   - `max(kafka_consumergroup_lag)`가 임계치 이상 유지
+   - 처리 시간 대부분이 추론 단계에 집중
+
+2. A -> C(Downstream 분리) 고려 조건
+   - 추론 이후 후단 처리 지연이 누적
+   - DB/외부 연동 구간 지연 증가(예: `pg_stat_database_*` 지표 악화)
+   - downstream 성격 오류/재시도가 증가
+
+3. B + C 결합 고려 조건
+   - inference 분리 후에도 downstream 지연/실패가 병목으로 남는 경우
+
+### 10.4 구현 우선순위
+1. 역할/토픽 분리 구조 고정 (완료)
+2. Inference role의 실제 GPU 전용 처리 로직 이관
+3. Downstream role의 저장/업로드/API 호출 책임 분리
+4. 전환 임계치(alert rule)와 autoscaling 정책 연동
 | created_at | 생성시각 |
 | updated_at | 수정시각 |
 
@@ -535,7 +583,7 @@ Codex는 아래 기준을 만족하도록 구조를 설계해야 한다. 기준�
 - Reverse Proxy: Nginx
 - Metrics: Prometheus
 - Dashboard: Grafana
-- Logs: Loki + Promtail 또는 EFK
+- Logs: EFK(Fluent Bit + Elasticsearch + Kibana)
 - Trace: OpenTelemetry + Jaeger
 - Container: Docker Compose
 
@@ -578,7 +626,7 @@ project/
 │  ├─ nginx/
 │  ├─ prometheus/
 │  ├─ grafana/
-│  └─ loki/
+│  └─ elasticsearch/
 ├─ scripts/
 │  ├─ backup.sh
 │  ├─ restore.sh
@@ -733,6 +781,40 @@ PROMETHEUS_ENABLED=true
 3. API, 이벤트 envelope, 상태 모델, 멱등성 키 전략은 A/B/C에서 공통으로 유지한다.
 4. Redis SETNX + TTL 기반 멱등성 처리와 DB unique constraint를 함께 고려한다.
 5. 최소 구현 범위는 `/jobs`, `/jobs/{job_id}`, `/health/live`, `/health/ready`, `/metrics`, Kafka producer/consumer, unified worker, Docker Compose 환경이다.
+
+---
+
+## Observability Architecture
+
+### 목적
+Observability는 단순 모니터링이 아니라, A/B/C 아키텍처 전환 판단의 근거 데이터로 사용한다.
+
+### 구성 요소
+- Metrics: Prometheus
+- Dashboard: Grafana
+- Logs: Fluent Bit
+- Future: OpenTelemetry tracing
+
+### Metrics 수집 대상
+- API metrics (`/metrics`)
+- Worker metrics
+- Kafka consumer lag
+- Redis exporter
+- Postgres exporter
+
+### Logs 수집 대상
+- Fluent Bit로 컨테이너 stdout 로그 수집
+- `api`, `worker`, `kafka`, `redis`, `postgres` 로그 수집
+- 수집 로그는 Elasticsearch에 저장하고 Kibana에서 조회
+
+### A/B/C 전환 판단 예시
+- Kafka lag 증가: Worker scaling 우선 적용
+- Worker processing time 증가: B 아키텍처(추론 병목 분리) 고려
+- DB latency 증가: C 아키텍처(다운스트림 병목 분리) 고려
+
+### 운영 원칙
+- API/Worker/Sink(DB, Redis, Kafka) 지표를 하나의 대시보드에서 교차 확인한다.
+- 임계치(예: lag, p95 latency, 오류율)를 기준으로 전환 판단 룰을 점진적으로 자동화한다.
 6. 코드 구조는 이후 unified worker를 inference worker와 downstream worker로 분리 배포할 수 있도록 모듈화한다.
 7. config/env 기반으로 아키텍처 모드 또는 feature flag 전환이 가능해야 한다.
 8. Prometheus metrics, structured logging, trace_id propagation을 고려한다.
