@@ -133,6 +133,7 @@ def resolve_worker_topic(settings: Settings) -> str:
 
 
 def resolve_worker_group_id(settings: Settings) -> str:
+    mode = settings.architecture_mode.lower()
     if settings.worker_role == "unified":
-        return "architecture-a-worker"
-    return f"architecture-a-worker-{settings.worker_role}"
+        return f"architecture-{mode}-worker"
+    return f"architecture-{mode}-worker-{settings.worker_role}"

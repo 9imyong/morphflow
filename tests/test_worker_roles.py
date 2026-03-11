@@ -4,8 +4,9 @@ from app.core.config import Settings
 from app.workers.roles import resolve_worker_group_id, resolve_worker_topic
 
 
-def _settings(role: str) -> Settings:
+def _settings(role: str, mode: str = "A") -> Settings:
     return Settings(
+        architecture_mode=mode,
         worker_role=role,
         kafka_request_topic="request-topic",
         kafka_inference_topic="inference-topic",
@@ -29,3 +30,15 @@ def test_downstream_role_topic_and_group() -> None:
     settings = _settings("downstream")
     assert resolve_worker_topic(settings) == "downstream-topic"
     assert resolve_worker_group_id(settings) == "architecture-a-worker-downstream"
+
+
+def test_group_id_changes_with_architecture_mode() -> None:
+    inference_c = _settings("inference", mode="C")
+    downstream_c = _settings("downstream", mode="C")
+    unified_b = _settings("unified", mode="B")
+    unified_bc = _settings("unified", mode="BC")
+
+    assert resolve_worker_group_id(inference_c) == "architecture-c-worker-inference"
+    assert resolve_worker_group_id(downstream_c) == "architecture-c-worker-downstream"
+    assert resolve_worker_group_id(unified_b) == "architecture-b-worker"
+    assert resolve_worker_group_id(unified_bc) == "architecture-bc-worker"
