@@ -37,9 +37,15 @@ class KafkaEventPublisher(EventPublisherPort):
         if not self._started:
             return False, "producer not started"
         try:
+            brokers = list(self._producer.client.cluster.brokers())
+            if brokers:
+                return True, f"ok ({len(brokers)} broker(s))"
+
+            # Try bootstrap only when metadata is empty.
             is_bootstrapped = await self._producer.client.bootstrap()
-            if not is_bootstrapped:
-                return False, "kafka bootstrap not ready"
-            return True, "ok"
+            brokers = list(self._producer.client.cluster.brokers())
+            if is_bootstrapped or brokers:
+                return True, f"ok ({len(brokers)} broker(s))"
+            return False, "kafka bootstrap not ready"
         except Exception as exc:
             return False, str(exc)
