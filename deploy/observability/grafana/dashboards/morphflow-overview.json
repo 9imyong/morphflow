@@ -226,13 +226,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max(kafka_consumergroup_lag)",
-          "legendFormat": "max lag",
+          "expr": "max(kafka_consumergroup_lag{consumergroup=\"$architecture\",topic!=\"retry-topic\"})",
+          "legendFormat": "{{consumergroup}} / {{topic}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Kafka Consumer Lag",
+      "title": "Kafka Consumer Lag (By Architecture)",
       "type": "timeseries"
     },
     {
@@ -362,7 +362,40 @@
     "architecture-a"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "A",
+          "value": "architecture-a-worker"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Architecture",
+        "multi": false,
+        "name": "architecture",
+        "options": [
+          {
+            "selected": true,
+            "text": "A",
+            "value": "architecture-a-worker"
+          },
+          {
+            "selected": false,
+            "text": "B",
+            "value": "architecture-a-worker-inference"
+          },
+          {
+            "selected": false,
+            "text": "C",
+            "value": "architecture-a-worker-downstream"
+          }
+        ],
+        "query": "A : architecture-a-worker,B : architecture-a-worker-inference,C : architecture-a-worker-downstream",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
