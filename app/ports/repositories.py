@@ -10,7 +10,15 @@ class JobRepositoryPort:
     async def get(self, job_id: str) -> Job | None:
         raise NotImplementedError
 
-    async def update_status(self, job_id: str, status: str, *, result: dict | None = None, error: str | None = None) -> Job | None:
+    async def update_status(
+        self,
+        job_id: str,
+        status: str,
+        *,
+        result: dict | None = None,
+        error: str | None = None,
+        clear_error: bool = False,
+    ) -> Job | None:
         raise NotImplementedError
 
 

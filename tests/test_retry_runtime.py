@@ -68,6 +68,7 @@ async def test_worker_can_retry_after_failed_attempt(session_factory, idempotenc
     updated = await job_service.get_job(created.id)
     assert updated is not None
     assert updated.status == JobStatus.SUCCESS
+    assert updated.error is None
 
     async with session_factory() as session:
         events = await SqlAlchemyJobEventRepository(session).list_for_job(created.id)

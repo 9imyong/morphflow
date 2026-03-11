@@ -55,7 +55,12 @@ class WorkerService:
             async with self.session_factory() as session:
                 job_repository = SqlAlchemyJobRepository(session)
                 event_repository = SqlAlchemyJobEventRepository(session)
-                await job_repository.update_status(job_id, JobStatus.SUCCESS.value, result=result, error=None)
+                await job_repository.update_status(
+                    job_id,
+                    JobStatus.SUCCESS.value,
+                    result=result,
+                    clear_error=True,
+                )
                 await event_repository.add(
                     build_event(
                         job_id=job_id,

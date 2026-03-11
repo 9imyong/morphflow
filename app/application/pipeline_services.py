@@ -124,7 +124,7 @@ class DownstreamPipelineService:
                     job_id,
                     JobStatus.SUCCESS.value,
                     result={"inference": event["payload"].get("inference_result"), "downstream": downstream_result},
-                    error=None,
+                    clear_error=True,
                 )
                 await event_repository.add(
                     build_event(

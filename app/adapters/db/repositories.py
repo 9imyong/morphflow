@@ -45,6 +45,7 @@ class SqlAlchemyJobRepository:
         *,
         result: dict | None = None,
         error: str | None = None,
+        clear_error: bool = False,
     ) -> Job | None:
         model = await self.session.get(JobModel, job_id)
         if model is None:
@@ -52,7 +53,9 @@ class SqlAlchemyJobRepository:
         model.status = status
         if result is not None:
             model.result = result
-        if error is not None:
+        if clear_error:
+            model.error_message = None
+        elif error is not None:
             model.error_message = error
         await self.session.flush()
         # Keep model state fully loaded in async context to avoid lazy-load after flush.
