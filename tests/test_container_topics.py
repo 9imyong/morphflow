@@ -37,13 +37,13 @@ def test_job_service_uses_request_topic_in_mode_a() -> None:
     assert container.job_service().topic == "request-topic"
 
 
-def test_job_service_uses_inference_topic_in_mode_b() -> None:
+def test_job_service_uses_request_topic_in_mode_b() -> None:
     settings = Settings(architecture_mode="B", kafka_request_topic="request-topic", kafka_inference_topic="inference-topic")
     container = _container(settings)
-    assert container.job_service().topic == "inference-topic"
+    assert container.job_service().topic == "request-topic"
 
 
-def test_job_service_uses_inference_topic_in_mode_c() -> None:
+def test_job_service_uses_request_topic_in_mode_c() -> None:
     settings = Settings(architecture_mode="C", kafka_request_topic="request-topic", kafka_inference_topic="inference-topic")
     container = _container(settings)
-    assert container.job_service().topic == "inference-topic"
+    assert container.job_service().topic == "request-topic"

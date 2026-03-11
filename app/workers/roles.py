@@ -128,7 +128,8 @@ def resolve_worker_topic(settings: Settings) -> str:
     if settings.worker_role == "unified":
         return settings.kafka_request_topic
     if settings.worker_role == "inference":
-        return settings.kafka_inference_topic
+        # Inference consumes the same ingress stream in B/C/BC modes.
+        return settings.kafka_request_topic
     return settings.kafka_downstream_topic
 
 

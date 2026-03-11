@@ -22,7 +22,7 @@ async def test_c_pipeline_inference_to_downstream_to_success(session_factory, id
         session_factory=session_factory,
         idempotency_store=idempotency_store,
         publisher=publisher,
-        topic="inference-topic",
+        topic="request-topic",
     )
     inference_service = InferencePipelineService(
         session_factory=session_factory,

@@ -22,7 +22,7 @@ def test_unified_role_topic_and_group() -> None:
 
 def test_inference_role_topic_and_group() -> None:
     settings = _settings("inference")
-    assert resolve_worker_topic(settings) == "inference-topic"
+    assert resolve_worker_topic(settings) == "request-topic"
     assert resolve_worker_group_id(settings) == "architecture-a-worker-inference"
 
 

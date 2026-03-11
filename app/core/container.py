@@ -20,11 +20,6 @@ class AppContainer:
     publisher: KafkaEventPublisher
 
     def job_service(self) -> JobService:
-        if self.settings.architecture_mode in {"B", "C", "BC"}:
-            publish_topic = self.settings.kafka_inference_topic
-        else:
-            publish_topic = self.settings.kafka_request_topic
-
         return JobService(
             session_factory=self.session_factory,
             idempotency_store=RedisIdempotencyStore(
@@ -33,7 +28,8 @@ class AppContainer:
                 processing_ttl_seconds=self.settings.worker_processing_ttl_seconds,
             ),
             publisher=self.publisher,
-            topic=publish_topic,
+            # Keep ingress fixed across architecture modes so backlog continuity is preserved.
+            topic=self.settings.kafka_request_topic,
         )
 
     def worker_service(self) -> WorkerService:
