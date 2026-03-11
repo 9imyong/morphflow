@@ -145,6 +145,8 @@ alembic downgrade -1
   - `docs/architecture_operations_package_20260310.md`
 - A/B/C 성능 요약:
   - `docs/perf_summary_abc_20260310.md`
+- C 모드 부하 실측 보고서:
+  - `docs/perf_test_report_cmode_20260311.md`
 - 상세 아키텍처 스펙:
   - `docs/codex_working_spec_abctransition.md`
 - 장애 Runbook:

@@ -8,7 +8,7 @@
 ## 2. 측정 범위
 - A 모드: k6 실측 완료 (`docs/perf_test_report_20260310.md`)
 - B 모드: k6 실측 완료 (`docs/perf_test_report_bmode_20260310.md`)
-- C 모드: 최소 분리 시나리오 테스트 완료 (`tests/test_c_architecture_flow.py`), k6 부하 실측은 후속
+- C 모드: k6 실측 완료 (`docs/perf_test_report_cmode_20260311.md`)
 
 ---
 
@@ -16,12 +16,12 @@
 
 | 항목 | A 모드 | B 모드 | C 모드 |
 |---|---:|---:|---|
-| 최대 실측 부하 | 50 VU | 50 VU | 시나리오 테스트 |
-| HTTP req/s (50 VU) | 449.04 | 316.73 | 미측정 |
-| p95 (50 VU, ms) | 28.34 | 18.64 | 미측정 |
-| 실패율 (50 VU) | 0.00% | 0.35% | 미측정 |
-| 주요 lag 지표 | `max lag` 13384 | inference group `max` 10716 | downstream group 관측 체계 구축 |
-| worker p95 | ~0.7375s | ~0.983s | downstream p95 metric 추가 완료 |
+| 최대 실측 부하 | 50 VU | 50 VU | 50 VU |
+| HTTP req/s (50 VU) | 449.04 | 316.73 | 451.11 |
+| p95 (50 VU, ms) | 28.34 | 18.64 | 32.03 |
+| 실패율 (50 VU) | 0.00% | 0.35% | 0.00% |
+| 주요 lag 지표 | `max lag` 13384 | inference group `max` 10716 | downstream group `max_over_time` 1 |
+| stage p95 | worker p95 ~0.7375s | inference p95 ~0.9875s | downstream p95 ~0.7375s |
 
 ---
 
@@ -36,9 +36,9 @@
 - 동시성 2, 지연 900ms 조건에서 inference lag 누적과 일부 실패율이 관측되어 병목 재현 가능.
 
 ### C 모드
-- inference -> downstream 분리 경로는 시나리오 테스트로 검증됨.
-- downstream 병목 측정용 metric/alert(`downstream_processing_seconds`, `DownstreamConsumerLagHigh`) 준비 완료.
-- k6 기반 C 모드 부하 실측은 다음 단계 필요.
+- inference -> downstream 분리 경로가 10/30/50 VU에서 실측 검증됨.
+- downstream lag는 낮게 유지(max 1, current 0).
+- downstream p95 latency는 약 0.7375s로 관측됨.
 
 ---
 
@@ -53,4 +53,3 @@
 1. C 모드 전용 부하 테스트(10/30/50 VU) 재실행
 2. downstream worker replica 1/2/3 비교
 3. inference/downstream 동시 scale 조합 실험으로 SLO 경계값 도출
-

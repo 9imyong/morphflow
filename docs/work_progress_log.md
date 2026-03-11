@@ -378,3 +378,20 @@
 - 메모/이슈:
   - `WORKER_PROCESSOR_BACKEND=dummy`로 언제든 기존 dummy 경로 사용 가능
   - 검증 결과: `uv run --extra dev pytest -q ...` (`22 passed`)
+
+### [Task-20260310-19] C 아키텍처 부하 테스트 실측
+- 상태: DONE
+- 진행도: 100%
+- 담당: Codex
+- 시작일: 2026-03-10
+- 최근 업데이트: 2026-03-11
+- 목표(DoD): C architecture에서 inference/downstream 분리 효과를 실제 부하 테스트로 검증한다.
+- 작업 단위:
+  - [x] WU-1: k6 부하 테스트 실행(10/30/50 VU)
+  - [x] WU-2: downstream lag 실측(query 기반)
+  - [x] WU-3: downstream latency 실측(query 기반)
+  - [x] WU-4: A/B/C 성능 비교 문서 업데이트
+- 메모/이슈:
+  - C 모드 보고서: `docs/perf_test_report_cmode_20260311.md`
+  - 결과 JSON: `reports/perf/k6_cmode_vus10.json`, `reports/perf/k6_cmode_vus30.json`, `reports/perf/k6_cmode_vus50.json`
+  - downstream worker metric 수집을 위해 `deploy/observability/prometheus.yml`의 worker scrape target에 `downstream-worker:9001` 추가
