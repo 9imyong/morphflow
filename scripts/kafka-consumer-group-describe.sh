@@ -5,7 +5,6 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.dev.yml}"
 ENV_FILE="${ENV_FILE:-env/.env.dev}"
 KAFKA_SERVICE="${KAFKA_SERVICE:-kafka}"
 GROUP_ID="${1:-${KAFKA_GROUP_ID:-}}"
-ARCH_MODE_RAW="${ARCHITECTURE_MODE:-}"
 WORKER_ROLE_RAW="${2:-${WORKER_ROLE:-}}"
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then
@@ -18,23 +17,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-if [[ -z "$GROUP_ID" && -n "$ARCH_MODE_RAW" ]]; then
-  ARCH_MODE="$(printf '%s' "$ARCH_MODE_RAW" | tr '[:lower:]' '[:upper:]')"
-  case "$ARCH_MODE" in
-    A|B|C|BC) ;;
-    *)
-      echo "invalid ARCHITECTURE_MODE: $ARCH_MODE (allowed: A|B|C|BC)" >&2
-      exit 1
-      ;;
-  esac
-
-  if [[ -z "$WORKER_ROLE_RAW" ]]; then
-    case "$ARCH_MODE" in
-      A) WORKER_ROLE_RAW="unified" ;;
-      B|C|BC) WORKER_ROLE_RAW="inference" ;;
-    esac
-  fi
-
+if [[ -z "$GROUP_ID" && -n "$WORKER_ROLE_RAW" ]]; then
   case "$WORKER_ROLE_RAW" in
     unified|inference|downstream) ;;
     *)
@@ -43,11 +26,10 @@ if [[ -z "$GROUP_ID" && -n "$ARCH_MODE_RAW" ]]; then
       ;;
   esac
 
-  MODE_LOWER="$(printf '%s' "$ARCH_MODE" | tr '[:upper:]' '[:lower:]')"
-  if [[ "$WORKER_ROLE_RAW" == "unified" ]]; then
-    GROUP_ID="architecture-${MODE_LOWER}-worker"
+  if [[ "$WORKER_ROLE_RAW" == "downstream" ]]; then
+    GROUP_ID="architecture-main-worker-downstream"
   else
-    GROUP_ID="architecture-${MODE_LOWER}-worker-${WORKER_ROLE_RAW}"
+    GROUP_ID="architecture-main-worker"
   fi
 fi
 
