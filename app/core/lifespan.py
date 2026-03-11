@@ -9,14 +9,13 @@ from app.core.config import get_settings
 from app.core.container import AppContainer
 from app.core.database import create_engine, create_session_factory
 from app.core.logging import configure_logging
-from app.core.tracing import instrument_runtime_libraries, setup_fastapi_tracing, shutdown_tracing
+from app.core.tracing import instrument_runtime_libraries, shutdown_tracing
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings)
-    setup_fastapi_tracing(app, settings)
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
     redis = from_url(settings.redis_url, decode_responses=True)

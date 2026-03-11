@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 
 from app.api.routes import health, jobs, metrics
+from app.core.config import get_settings
 from app.core.lifespan import lifespan
 from app.core.metrics import HTTP_REQUESTS_TOTAL
+from app.core.tracing import setup_fastapi_tracing
 
 
 app = FastAPI(title="Fault Monitoring System", lifespan=lifespan)
+setup_fastapi_tracing(app, get_settings())
 
 
 @app.middleware("http")

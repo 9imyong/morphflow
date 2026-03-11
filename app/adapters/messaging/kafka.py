@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from inspect import isawaitable
 
 from aiokafka import AIOKafkaProducer
 
@@ -30,7 +31,10 @@ class KafkaEventPublisher(EventPublisherPort):
         kafka_headers = None
         if headers:
             kafka_headers = [(key, value.encode("utf-8")) for key, value in headers.items()]
-        await self._producer.send_and_wait(topic, event, headers=kafka_headers)
+        # Use send() directly to avoid headers arg collisions under aiokafka OTel instrumentation.
+        result = await self._producer.send(topic, value=event, headers=kafka_headers)
+        if isawaitable(result):
+            await result
         JOB_EVENT_PUBLISHED_TOTAL.inc()
 
     async def readiness(self) -> tuple[bool, str]:
