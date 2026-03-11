@@ -17,6 +17,8 @@ from app.ports.worker_role import WorkerRolePort
 
 
 logger = logging.getLogger(__name__)
+REQUEST_GROUP_ID = "architecture-main-worker"
+DOWNSTREAM_GROUP_ID = "architecture-main-worker-downstream"
 
 
 class UnifiedWorkerRole(WorkerRolePort):
@@ -133,8 +135,15 @@ def resolve_worker_topic(settings: Settings) -> str:
     return settings.kafka_downstream_topic
 
 
+def resolve_worker_retry_topic(settings: Settings) -> str:
+    if settings.worker_role == "downstream":
+        return settings.kafka_retry_topic_downstream
+    return settings.kafka_retry_topic_request
+
+
 def resolve_worker_group_id(settings: Settings) -> str:
-    mode = settings.architecture_mode.lower()
-    if settings.worker_role == "unified":
-        return f"architecture-{mode}-worker"
-    return f"architecture-{mode}-worker-{settings.worker_role}"
+    # Keep ingress consumer offsets continuous across architecture switches.
+    # A(unified) and B/C/BC(inference) share the same request-topic group.
+    if settings.worker_role == "downstream":
+        return DOWNSTREAM_GROUP_ID
+    return REQUEST_GROUP_ID

@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_request_topic: str = "request-topic"
     kafka_inference_topic: str = "inference-topic"
-    kafka_retry_topic: str = "retry-topic"
+    kafka_retry_topic_request: str = "retry-topic"
+    kafka_retry_topic_downstream: str = "retry-downstream-topic"
     kafka_dlq_topic: str = "dlq-topic"
     kafka_downstream_topic: str = "downstream-topic"
     worker_role: Literal["unified", "inference", "downstream"] = "unified"
@@ -33,6 +34,10 @@ class Settings(BaseSettings):
     idempotency_ttl_seconds: int = 3600
     worker_processing_ttl_seconds: int = 1800
     log_level: str = "INFO"
+    tracing_enabled: bool = True
+    otel_exporter_otlp_endpoint: str = "http://jaeger:4317"
+    otel_service_name_api: str = "morphflow-api"
+    otel_service_name_worker: str = "morphflow-worker"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

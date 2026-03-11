@@ -16,6 +16,10 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     env_file:
       - env/.env.dev
+    environment:
+      TRACING_ENABLED: "${TRACING_ENABLED:-true}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}"
+      OTEL_SERVICE_NAME_API: "${OTEL_SERVICE_NAME_API:-morphflow-api}"
     ports:
       - "${API_HOST_PORT:-8000}:8000"
     depends_on:
@@ -34,6 +38,10 @@ services:
     command: python -m app.workers.runner
     env_file:
       - env/.env.dev
+    environment:
+      TRACING_ENABLED: "${TRACING_ENABLED:-true}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}"
+      OTEL_SERVICE_NAME_WORKER: "${OTEL_SERVICE_NAME_WORKER:-morphflow-worker}"
     ports:
       - "${WORKER_METRICS_HOST_PORT:-9000}:9000"
     depends_on:

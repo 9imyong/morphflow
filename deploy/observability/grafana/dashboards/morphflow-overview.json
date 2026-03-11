@@ -226,7 +226,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max(kafka_consumergroup_lag{consumergroup=\"$architecture\",topic!=\"retry-topic\"})",
+          "expr": "max(kafka_consumergroup_lag{consumergroup=\"$architecture\",topic!~\"retry.*\"})",
           "legendFormat": "{{consumergroup}} / {{topic}}",
           "range": true,
           "refId": "A"
@@ -359,15 +359,15 @@
   "style": "dark",
   "tags": [
     "morphflow",
-    "architecture-a"
+    "architecture-main"
   ],
   "templating": {
     "list": [
       {
         "current": {
           "selected": true,
-          "text": "A",
-          "value": "architecture-a-worker"
+          "text": "Main",
+          "value": "architecture-main-worker"
         },
         "hide": 0,
         "includeAll": false,
@@ -377,21 +377,16 @@
         "options": [
           {
             "selected": true,
-            "text": "A",
-            "value": "architecture-a-worker"
+            "text": "Main",
+            "value": "architecture-main-worker"
           },
           {
             "selected": false,
-            "text": "B",
-            "value": "architecture-a-worker-inference"
-          },
-          {
-            "selected": false,
-            "text": "C",
-            "value": "architecture-a-worker-downstream"
+            "text": "Downstream",
+            "value": "architecture-main-worker-downstream"
           }
         ],
-        "query": "A : architecture-a-worker,B : architecture-a-worker-inference,C : architecture-a-worker-downstream",
+        "query": "Main : architecture-main-worker,Downstream : architecture-main-worker-downstream",
         "skipUrlSync": false,
         "type": "custom"
       }

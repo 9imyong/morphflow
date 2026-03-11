@@ -56,7 +56,7 @@ groups:
           description: "Consumer lag exceeded 100 for 5 minutes; consider worker scaling."
 
       - alert: DownstreamConsumerLagHigh
-        expr: max(kafka_consumergroup_lag{consumergroup="architecture-a-worker-downstream"}) > 100
+        expr: max(kafka_consumergroup_lag{consumergroup="architecture-main-worker-downstream"}) > 100
         for: 5m
         labels:
           severity: warning

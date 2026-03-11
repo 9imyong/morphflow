@@ -25,7 +25,7 @@ docker compose -f docker-compose.dev.yml --env-file env/.env.dev up -d --build
 ```
 
 ### B 모드 (추론 분리)
-- API -> `inference-topic` -> inference worker
+- API -> `request-topic` -> inference worker
 - processor backend 기본값: `simulator` (`WORKER_PROCESSOR_BACKEND`)
 - 실행:
 ```bash
@@ -33,7 +33,7 @@ docker compose -f docker-compose.dev.yml -f deploy/docker-compose.bmode.override
 ```
 
 ### C 모드 (downstream 분리)
-- API -> `inference-topic` -> inference worker -> `downstream-topic` -> downstream worker
+- API -> `request-topic` -> inference worker -> `downstream-topic` -> downstream worker
 - 실행:
 ```bash
 docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override.yml --env-file env/.env.dev up -d --build
@@ -51,7 +51,8 @@ docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override
 
 ### 토픽
 - `request-topic`
-- `retry-topic`
+- `retry-topic` (request/inference retry)
+- `retry-downstream-topic` (downstream retry)
 - `dlq-topic`
 
 ### 헤더
@@ -99,12 +100,18 @@ docker exec -i $(docker compose -f docker-compose.dev.yml ps -q kafka) \
 ### 구성
 - Metrics: Prometheus
 - Dashboard: Grafana
+- Tracing: OpenTelemetry -> Jaeger
+  - FastAPI request span
+  - aiokafka producer/consumer span
+  - SQLAlchemy query span
+  - Redis command span
 - Logs: Fluent Bit -> Elasticsearch -> Kibana (EFK)
 - Exporters: kafka/redis/postgres
 
 ### 접속
 - Prometheus: `http://localhost:9091`
 - Grafana: `http://localhost:3000`
+- Jaeger: `http://localhost:16686`
 - Elasticsearch: `http://localhost:9200`
 - Kibana: `http://localhost:5601`
 
