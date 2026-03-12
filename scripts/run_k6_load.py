@@ -34,7 +34,7 @@ def _run_command(cmd: list[str], cwd: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run k6 load tests via docker and export summary JSON files.")
-    parser.add_argument("--vus", default="10,30,50", help="Comma-separated VU list (default: 10,30,50)")
+    parser.add_argument("--vus", default="20,", help="Comma-separated VU list (default: 10,30,50)")
     parser.add_argument("--duration", default="1m", help="k6 duration (default: 1m)")
     parser.add_argument("--base-url", default="http://host.docker.internal:8000", help="API base URL")
     parser.add_argument("--mode-label", default="", help="Output label (e.g. bmode, cmode)")
