@@ -42,8 +42,8 @@ services:
       TRACING_ENABLED: "${TRACING_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}"
       OTEL_SERVICE_NAME_WORKER: "${OTEL_SERVICE_NAME_WORKER:-morphflow-worker}"
-    ports:
-      - "${WORKER_METRICS_HOST_PORT:-9000}:9000"
+    # ports:
+      # - "${WORKER_METRICS_HOST_PORT:-9000}:9000"
     depends_on:
       migrate:
         condition: service_completed_successfully
