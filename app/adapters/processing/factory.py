@@ -6,7 +6,7 @@ from app.core.config import Settings
 from app.ports.task_processor import TaskProcessorPort
 
 
-def build_primary_processor(settings: Settings) -> TaskProcessorPort:
+def build_primary_processor(settings: Settings, *, disable_batch: bool = False) -> TaskProcessorPort:
     if settings.worker_processor_backend == "dummy":
         return DummyTaskProcessor()
     return GpuInferenceSimulator(
@@ -14,4 +14,8 @@ def build_primary_processor(settings: Settings) -> TaskProcessorPort:
         base_latency_ms=settings.inference_simulated_latency_ms,
         simulated_gpu_utilization=settings.inference_simulated_gpu_utilization,
         failure_rate=settings.inference_simulated_failure_rate,
+        batch_enabled=settings.inference_batch_enabled and not disable_batch,
+        batch_size=settings.inference_batch_size,
+        batch_timeout_ms=settings.inference_batch_timeout_ms,
+        batch_overhead_ms=settings.inference_batch_overhead_ms,
     )

@@ -179,6 +179,46 @@ A/B/C 전환 판단:
 
 ---
 
+### 3.7 B 모드 배치 처리 튜닝/롤백
+
+증상/예측 지표:
+- `architecture-main-worker`의 `request-topic` lag가 지속 증가
+- API req/s는 높지만 worker 처리율이 따라오지 못함
+- p95 latency 상승(배치 대기시간 증가)
+
+1차 대응:
+1. 현재 배치 파라미터 확인
+   - `INFERENCE_BATCH_SIZE`
+   - `INFERENCE_BATCH_TIMEOUT_MS`
+   - `KAFKA_CONSUMER_BATCH_MAX_RECORDS`
+   - `KAFKA_CONSUMER_BATCH_TIMEOUT_MS`
+2. timeout을 먼저 축소해 tail latency를 안정화
+3. lag가 계속 증가하면 즉시 파티션/워커 스케일링 병행
+
+튜닝 가이드(권장 시작점):
+1. 저트래픽/지연 민감:
+   - `INFERENCE_BATCH_SIZE=4`
+   - `INFERENCE_BATCH_TIMEOUT_MS=20~30`
+2. 고트래픽/처리량 우선:
+   - `INFERENCE_BATCH_SIZE=8~16`
+   - `INFERENCE_BATCH_TIMEOUT_MS=50~100`
+3. Kafka 소비 배치:
+   - `KAFKA_CONSUMER_BATCH_MAX_RECORDS=32~128`
+   - `KAFKA_CONSUMER_BATCH_TIMEOUT_MS=100~300`
+
+롤백 절차:
+1. 즉시 기능 롤백(안전 모드)
+   - `INFERENCE_BATCH_ENABLED=false`
+   - `KAFKA_CONSUMER_BATCH_ENABLED=false`
+2. worker 재기동 후 `request-topic` lag 추세 재확인
+3. 원인 분석 후 단계적 재활성화(consumer batch -> gpu batch 순)
+
+후속 조치:
+- 배치 튜닝은 항상 `lag + p95 + 실패율` 3개 지표를 동시에 평가
+- 단일 파티션/단일 worker 구성에서는 배치만으로 lag를 근본 해소하기 어렵기 때문에 스케일링 계획을 선행한다.
+
+---
+
 ## 4. RCA/재발방지 표준 절차
 
 1. 사고 타임라인 정리

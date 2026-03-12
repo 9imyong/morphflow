@@ -8,6 +8,7 @@ from app.adapters.messaging.kafka import KafkaEventPublisher
 from app.core.config import get_settings
 from app.core.container import AppContainer
 from app.core.database import create_engine, create_session_factory
+from app.core.kafka_topics import ensure_kafka_topics
 from app.core.logging import configure_logging
 from app.core.tracing import instrument_runtime_libraries, shutdown_tracing
 
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     session_factory = create_session_factory(engine)
     redis = from_url(settings.redis_url, decode_responses=True)
     instrument_runtime_libraries(engine=engine, redis_client=redis)
+    await ensure_kafka_topics(settings)
     publisher = KafkaEventPublisher(settings.kafka_bootstrap_servers)
     await publisher.start()
     app.state.container = AppContainer(

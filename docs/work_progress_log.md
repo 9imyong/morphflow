@@ -395,3 +395,22 @@
   - C 모드 보고서: `docs/perf_test_report_cmode_20260311.md`
   - 결과 JSON: `reports/perf/k6_cmode_vus10.json`, `reports/perf/k6_cmode_vus30.json`, `reports/perf/k6_cmode_vus50.json`
   - downstream worker metric 수집을 위해 `deploy/observability/prometheus.yml`의 worker scrape target에 `downstream-worker:9001` 추가
+
+### [Task-20260312-20] B 모드 배치 처리 적용(Kafka consume batch + GPU micro-batch)
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-12
+- 최근 업데이트: 2026-03-12
+- 목표(DoD): B 모드에서 단건 직렬 처리 병목을 완화하도록 Kafka 배치 consume과 GPU micro-batch를 적용하고, lag 감소 효과를 실측한다.
+- 작업 단위:
+  - [x] WU-1: 배치 처리 설정값 추가(`kafka_consumer_batch_*`, `inference_batch_*`)
+  - [x] WU-2: worker runner를 `getmany()` 기반 배치 consume 구조로 전환
+  - [x] WU-3: GPU simulator에 `batch_size`/`batch_timeout_ms` 기반 micro-batch 로직 추가
+  - [x] WU-4: 단위 테스트 보강(`tests/test_gpu_simulator.py`) 및 회귀 테스트 통과
+  - [x] WU-5: B 모드 실측(10/30/50 VU) 재실행 및 lag/처리율 비교 리포트 작성
+  - [x] WU-6: 운영 가이드(튜닝 파라미터/권장 초기값/롤백 절차) 문서 반영
+- 메모/이슈:
+  - 앱 기본값으로 배치 설정을 제공하고, env는 필수 항목 중심으로 정리했다.
+  - 실측 결과는 `docs/perf_test_report_bmode_20260310.md`에 반영했다(2026-03-12 재실측).
+  - 운영 튜닝/롤백 절차는 `docs/incident_runbook_abctransition.md`의 `3.7 B 모드 배치 처리 튜닝/롤백`에 반영했다.

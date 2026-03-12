@@ -72,6 +72,7 @@ def build_worker_role(
         )
         return UnifiedWorkerRole(service)
     if settings.worker_role == "inference":
+        disable_gpu_batch = settings.architecture_mode == "C"
         if settings.architecture_mode in {"C", "BC"}:
             service = InferencePipelineService(
                 session_factory=session_factory,
@@ -80,7 +81,7 @@ def build_worker_role(
                     ttl_seconds=settings.idempotency_ttl_seconds,
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
-                processor=build_primary_processor(settings),
+                processor=build_primary_processor(settings, disable_batch=disable_gpu_batch),
                 publisher=publisher,
                 downstream_topic=settings.kafka_downstream_topic,
             )
@@ -92,7 +93,7 @@ def build_worker_role(
                     ttl_seconds=settings.idempotency_ttl_seconds,
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
-                processor=build_primary_processor(settings),
+                processor=build_primary_processor(settings, disable_batch=disable_gpu_batch),
             )
         return InferenceWorkerRole(service)
     if settings.worker_role == "downstream":
