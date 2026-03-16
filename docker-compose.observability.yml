@@ -96,6 +96,17 @@ services:
     networks:
       - morphflow_shared
 
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: morphflow-obsv-node-exporter
+    command:
+      - "--path.rootfs=/host"
+    volumes:
+      - /:/host:ro
+    restart: unless-stopped
+    networks:
+      - morphflow_shared
+
   jaeger:
     image: jaegertracing/all-in-one:1.60
     container_name: morphflow-obsv-jaeger
