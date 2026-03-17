@@ -414,3 +414,42 @@
   - 앱 기본값으로 배치 설정을 제공하고, env는 필수 항목 중심으로 정리했다.
   - 실측 결과는 `docs/perf_test_report_bmode_20260310.md`에 반영했다(2026-03-12 재실측).
   - 운영 튜닝/롤백 절차는 `docs/incident_runbook_abctransition.md`의 `3.7 B 모드 배치 처리 튜닝/롤백`에 반영했다.
+
+### [Task-20260317-21] Compose 기반 스택의 Kind 배포 전환
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-17
+- 최근 업데이트: 2026-03-17
+- 목표(DoD): 현재 docker compose 기반 API/worker/redis/postgres/kafka/observability 스택을 Kubernetes 매니페스트로 전환하고, Kind 클러스터에서 최소 실행/연결/검증이 가능하도록 만든다.
+- 작업 단위:
+  - [x] WU-1: 현재 compose 서비스(api/worker/postgres/redis/kafka/prometheus/grafana 등)를 Kubernetes 전환 대상 기준으로 분류한다.
+  - [x] WU-2: `deploy/k8s/base` 디렉토리를 만들고 공통 Kubernetes 리소스(Deployment, Service, ConfigMap, Secret, PVC 초안)를 작성한다.
+  - [x] WU-3: API/worker용 Deployment 및 Service를 작성하고 env/config 주입 방식을 Compose 의존 없이 동작하도록 정리한다.
+  - [x] WU-4: Redis/Postgres/Kafka의 로컬 검증용 Kind 배포 리소스를 작성하거나 외부 compose 의존 여부를 결정해 문서화한다.
+  - [x] WU-5: readiness/liveness probe를 Kubernetes 방식으로 반영하고 `/health`, `/health/ready` 기준이 Kind 환경에서 정상 동작하는지 검증한다.
+  - [x] WU-6: Kind 클러스터 생성 스크립트 및 로컬 이미지 로드 절차(`kind load docker-image`)를 문서화한다.
+  - [x] WU-7: NodePort 기반 진입 경로를 선택해 API 접근 가능 상태를 검증한다.
+  - [x] WU-8: 최소 E2E 검증(API -> Kafka -> Worker -> DB)을 Kind에서 수행되는지 확인한다.
+  - [x] WU-9: README 및 배포 문서에 Compose -> Kind -> k3s 전환 전략과 차이점을 반영한다.
+- 메모/이슈:
+  - 목적은 운영용 k3s 완성이 아니라 Kubernetes 리소스 구조 검증에 맞췄다.
+  - Compose `depends_on`은 Kubernetes `initContainer + probe + migrate Job`으로 재해석했다.
+  - Observability 전체(EFK/Jaeger/exporter)는 2차 이관 대상으로 분리했고, 1차는 core dependency + app 경로를 고정했다.
+
+### [Task-20260317-22] K8s Overlay 추가(B/C/BC + Observability)
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-17
+- 최근 업데이트: 2026-03-17
+- 목표(DoD): Compose override와 동일한 운영 흐름을 kustomize overlay로 제공하고, observability를 독립 overlay로 분리한다.
+- 작업 단위:
+  - [x] WU-1: `bmode/cmode/bcmode` overlay 생성 및 base patch 구성
+  - [x] WU-2: C/BC 모드용 `downstream-worker` Deployment/Service 추가
+  - [x] WU-3: `observability` overlay(Prometheus/Grafana/Jaeger/exporters) 구성
+  - [x] WU-4: `kubectl kustomize` 렌더 검증(base + overlays)
+  - [x] WU-5: README/전환 문서 실행 가이드 업데이트
+- 메모/이슈:
+  - `scripts/k8s-deploy-kind.sh`는 기본 배포에서 migrate를 생략하고 `--with-migrate` 옵션 시에만 실행하도록 변경했다.
+  - observability overlay는 kustomize 보안 제한(load restrictor)을 고려해 설정 파일을 overlay 내부 `configs/`로 복제해 관리한다.

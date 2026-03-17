@@ -146,7 +146,72 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-## 8. 운영 문서
+## 8. Kubernetes(Kind) 배포
+
+### 범위
+- 1차 범위: `api`, `worker`, `postgres`, `redis`, `kafka`, `migrate job`
+- 경로: `deploy/k8s/base`
+- 진입: NodePort `30081` (기본 호스트 `18000`으로 매핑)
+- override 대응: `deploy/k8s/overlays/{bmode,cmode,bcmode}`
+- observability: `deploy/k8s/overlays/observability` (Prometheus/Grafana/Jaeger/exporters)
+
+### 실행 순서
+```bash
+# 1) kind 클러스터 생성
+scripts/kind-create-cluster.sh morphflow
+
+# 2) 앱 이미지 빌드
+docker build -t morphflow-app:kind .
+
+# 3) kind 노드로 이미지 로드
+scripts/kind-load-images.sh morphflow
+
+# 4) 기본(A) 배포 (migrate 생략)
+scripts/k8s-deploy-kind.sh morphflow base
+```
+
+검증:
+```bash
+curl -s http://localhost:18000/health/live
+curl -s http://localhost:18000/health/ready
+```
+
+마이그레이션이 필요한 경우(스키마 변경 시점):
+```bash
+scripts/k8s-deploy-kind.sh morphflow base --with-migrate
+```
+
+아키텍처 모드 overlay:
+```bash
+# B 모드
+scripts/k8s-deploy-kind.sh morphflow bmode
+
+# C 모드 (downstream-worker 포함)
+scripts/k8s-deploy-kind.sh morphflow cmode
+
+# BC 모드 (downstream-worker 포함)
+scripts/k8s-deploy-kind.sh morphflow bcmode
+```
+
+Observability overlay:
+```bash
+kubectl apply -k deploy/k8s/overlays/observability --context kind-morphflow
+```
+
+주요 접속(NodePort):
+- Grafana: `http://localhost:30300`
+- Prometheus: `http://localhost:30901`
+- Jaeger UI: `http://localhost:30686`
+
+포트 충돌 시:
+```bash
+HOST_API_PORT=28000 scripts/kind-create-cluster.sh morphflow
+```
+
+전환 전략(Compose -> Kind -> k3s) 상세:
+- `docs/k8s_kind_transition_plan_20260317.md`
+
+## 9. 운영 문서
 
 - 아키텍처/운영 최종 패키지:
   - `docs/architecture_operations_package_20260310.md`
@@ -158,5 +223,7 @@ alembic downgrade -1
   - `docs/codex_working_spec_abctransition.md`
 - 장애 Runbook:
   - `docs/incident_runbook_abctransition.md`
+- Compose -> Kind 전환 계획/기록:
+  - `docs/k8s_kind_transition_plan_20260317.md`
 - 작업 로그:
   - `docs/work_progress_log.md`

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: morphflow
+
+resources:
+  - prometheus.yaml
+  - grafana.yaml
+  - jaeger.yaml
+  - exporters.yaml
+
+configMapGenerator:
+  - name: morphflow-prometheus-config
+    files:
+      - configs/prometheus.yml
+  - name: morphflow-prometheus-rules
+    files:
+      - configs/prometheus-rules.yml
+  - name: morphflow-grafana-datasource
+    files:
+      - configs/grafana-datasource-prometheus.yml
+  - name: morphflow-grafana-dashboard-provider
+    files:
+      - configs/grafana-dashboard-provider.yml
+  - name: morphflow-grafana-dashboards
+    files:
+      - configs/morphflow-overview.json
+
+generatorOptions:
+  disableNameSuffixHash: true

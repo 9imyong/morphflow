@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: morphflow-app-config
+  namespace: morphflow
+data:
+  ARCHITECTURE_MODE: C
+  KAFKA_INFERENCE_TOPIC: inference-topic
+  KAFKA_DOWNSTREAM_TOPIC: downstream-topic
+  WORKER_ROLE: inference
+  INFERENCE_MAX_CONCURRENCY: "2"
+  INFERENCE_SIMULATED_LATENCY_MS: "900"
+  INFERENCE_SIMULATED_GPU_UTILIZATION: "0.85"
