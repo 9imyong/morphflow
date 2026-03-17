@@ -12,19 +12,19 @@ resources:
 configMapGenerator:
   - name: morphflow-prometheus-config
     files:
-      - configs/prometheus.yml
+      - prometheus.yml=configs/prometheus.yml
   - name: morphflow-prometheus-rules
     files:
-      - configs/prometheus-rules.yml
+      - prometheus-rules.yml=configs/prometheus-rules.yml
   - name: morphflow-grafana-datasource
     files:
-      - configs/grafana-datasource-prometheus.yml
+      - prometheus.yml=configs/grafana-datasource-prometheus.yml
   - name: morphflow-grafana-dashboard-provider
     files:
-      - configs/grafana-dashboard-provider.yml
+      - dashboards.yml=configs/grafana-dashboard-provider.yml
   - name: morphflow-grafana-dashboards
     files:
-      - configs/morphflow-overview.json
+      - morphflow-overview.json=configs/morphflow-overview.json
 
 generatorOptions:
   disableNameSuffixHash: true
