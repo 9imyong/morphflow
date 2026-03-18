@@ -20,3 +20,25 @@ spec:
       backendRefs:
         - name: api
           port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /docs
+        - path:
+            type: PathPrefix
+            value: /openapi.json
+        - path:
+            type: PathPrefix
+            value: /redoc
+        - path:
+            type: PathPrefix
+            value: /jobs
+        - path:
+            type: PathPrefix
+            value: /health
+        - path:
+            type: PathPrefix
+            value: /metrics
+      backendRefs:
+        - name: api
+          port: 8000
