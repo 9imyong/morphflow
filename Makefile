@@ -2,6 +2,27 @@ SHELL := /bin/zsh
 
 K8S_CONTEXT ?= kind-local-dev
 KIND_NETWORK ?= kind
+KIND_CLUSTER ?= local-dev
+APP_IMAGE ?= morphflow-app:kind
+K8S_OVERLAY ?= base
+
+.PHONY: kind-image-build
+kind-image-build:
+	docker build -t $(APP_IMAGE) .
+
+.PHONY: kind-image-load
+kind-image-load:
+	scripts/kind-load-images.sh $(KIND_CLUSTER)
+
+.PHONY: kind-rebuild
+kind-rebuild: kind-image-build kind-image-load
+
+.PHONY: kind-deploy
+kind-deploy:
+	scripts/k8s-deploy-kind.sh $(KIND_CLUSTER) $(K8S_OVERLAY)
+
+.PHONY: kind-rebuild-deploy
+kind-rebuild-deploy: kind-rebuild kind-deploy
 
 .PHONY: net-install
 net-install:
