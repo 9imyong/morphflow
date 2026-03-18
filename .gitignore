@@ -18,3 +18,6 @@ htmlcov/
 
 # Local tool state
 uv.lock
+
+# Performance reports
+reports/perf/*
