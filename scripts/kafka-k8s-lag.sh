@@ -4,6 +4,7 @@ set -euo pipefail
 K8S_CONTEXT="${K8S_CONTEXT:-kind-local-dev}"
 NAMESPACE="${NAMESPACE:-morphflow}"
 KAFKA_TARGET="${KAFKA_TARGET:-deploy/kafka}"
+KAFKA_CONTAINER="${KAFKA_CONTAINER:-}"
 BOOTSTRAP_SERVER="${BOOTSTRAP_SERVER:-localhost:9092}"
 WATCH_MODE=false
 WATCH_INTERVAL="${WATCH_INTERVAL:-2}"
@@ -22,6 +23,7 @@ Options:
   --context <ctx>       Kubernetes context (default: kind-local-dev)
   --namespace <ns>      Kubernetes namespace (default: morphflow)
   --target <resource>   Kafka exec target (default: deploy/kafka)
+  --container <name>    Kafka container name (auto-detect if omitted)
   --bootstrap <addr>    Kafka bootstrap-server (default: localhost:9092)
   --role <role>         inference -> architecture-main-worker
                         downstream -> architecture-main-worker-downstream
@@ -48,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --target)
       KAFKA_TARGET="${2:-}"
+      shift 2
+      ;;
+    --container)
+      KAFKA_CONTAINER="${2:-}"
       shift 2
       ;;
     --bootstrap)
@@ -113,10 +119,28 @@ kubectl_exec() {
   local max_attempts=4
   local delay=2
   local out=""
+  local target="$KAFKA_TARGET"
+  local container="$KAFKA_CONTAINER"
 
   while (( attempts < max_attempts )); do
+    if [[ -z "$container" ]]; then
+      if [[ "$target" == deploy/* || "$target" == statefulset/* || "$target" == sts/* ]]; then
+        pod_name="$(kubectl get pods -n "$NAMESPACE" --context "$K8S_CONTEXT" -l app=kafka --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+        if [[ -n "$pod_name" ]]; then
+          target="pod/$pod_name"
+        fi
+      fi
+      if [[ "$target" == pod/* ]]; then
+        container="$(kubectl get "$target" -n "$NAMESPACE" --context "$K8S_CONTEXT" -o jsonpath='{.spec.containers[0].name}' 2>/dev/null || true)"
+      fi
+    fi
+
     set +e
-    out="$(kubectl exec -n "$NAMESPACE" --context "$K8S_CONTEXT" "$KAFKA_TARGET" -- sh -lc "$cmd" 2>&1)"
+    if [[ -n "$container" ]]; then
+      out="$(kubectl exec -n "$NAMESPACE" --context "$K8S_CONTEXT" "$target" -c "$container" -- sh -lc "$cmd" 2>&1)"
+    else
+      out="$(kubectl exec -n "$NAMESPACE" --context "$K8S_CONTEXT" "$target" -- sh -lc "$cmd" 2>&1)"
+    fi
     rc=$?
     set -e
 
@@ -127,6 +151,15 @@ kubectl_exec() {
 
     # Recoverable API hiccups under high load on single-node kind.
     if printf '%s' "$out" | grep -qiE 'TLS handshake timeout|Unable to connect to the server|timed out waiting for the condition'; then
+      attempts=$((attempts + 1))
+      sleep "$delay"
+      continue
+    fi
+
+    if printf '%s' "$out" | grep -qiE 'container not found'; then
+      # Reset container/target cache and retry by rediscovering pod/container.
+      target="$KAFKA_TARGET"
+      container=""
       attempts=$((attempts + 1))
       sleep "$delay"
       continue
