@@ -1,0 +1,29 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-kafka-lag
+  namespace: morphflow
+spec:
+  scaleTargetRef:
+    name: worker
+  pollingInterval: 15
+  cooldownPeriod: 180
+  minReplicaCount: 1
+  maxReplicaCount: 6
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.morphflow.svc.cluster.local:9092
+        consumerGroup: architecture-main-worker
+        topic: request-topic
+        lagThreshold: "100"
+        offsetResetPolicy: latest
+        allowIdleConsumers: "false"
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.morphflow.svc.cluster.local:9092
+        consumerGroup: architecture-main-worker
+        topic: retry-topic
+        lagThreshold: "20"
+        offsetResetPolicy: latest
+        allowIdleConsumers: "false"

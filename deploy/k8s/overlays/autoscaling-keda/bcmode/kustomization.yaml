@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../bcmode
+  - scaledobject-worker-inference.yaml
+  - scaledobject-downstream.yaml
+
+patchesStrategicMerge:
+  - patch-delete-hpa-worker.yaml
+  - patch-delete-hpa-downstream.yaml
