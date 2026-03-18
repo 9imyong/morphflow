@@ -19,6 +19,8 @@ spec:
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --web.enable-lifecycle
+            - --web.external-url=http://localhost:8080/prometheus
+            - --web.route-prefix=/prometheus
           ports:
             - containerPort: 9090
           volumeMounts:

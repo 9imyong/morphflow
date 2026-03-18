@@ -1,0 +1,15 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: morphflow-gateway
+  namespace: morphflow
+spec:
+  # Envoy Gateway 기본 GatewayClass 이름(설치 방식에 따라 다를 수 있음)
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

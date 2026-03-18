@@ -453,3 +453,20 @@
 - 메모/이슈:
   - `scripts/k8s-deploy-kind.sh`는 기본 배포에서 migrate를 생략하고 `--with-migrate` 옵션 시에만 실행하도록 변경했다.
   - observability overlay는 kustomize 보안 제한(load restrictor)을 고려해 설정 파일을 overlay 내부 `configs/`로 복제해 관리한다.
+
+### [Task-20260318-23] Networking Overlay 추가(MetalLB + Envoy Gateway)
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-18
+- 최근 업데이트: 2026-03-18
+- 목표(DoD): kind 환경에서 MetalLB + Envoy Gateway + HTTPRoute 기반 API 진입 템플릿을 추가한다.
+- 작업 단위:
+  - [x] WU-1: `deploy/k8s/overlays/networking` 디렉토리 생성
+  - [x] WU-2: MetalLB IP pool/L2Advertisement 템플릿 추가
+  - [x] WU-3: Gateway/HTTPRoute(api) 템플릿 추가
+  - [x] WU-4: networking overlay README(설치/검증 절차) 추가
+  - [x] WU-5: 루트 README에 networking overlay 사용 경로 반영
+- 메모/이슈:
+  - `metallb-ip-pool.yaml`의 주소 대역은 `docker network inspect kind` 결과에 맞춰 조정해야 한다.
+  - Envoy Gateway quickstart 설치 전에는 Gateway API 리소스 적용 시 CRD 오류가 발생할 수 있다.

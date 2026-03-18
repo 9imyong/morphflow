@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - gatewayclass-eg.yaml
+  - metallb-ip-pool.yaml
+  - gateway-morphflow.yaml
+  - httproute-api.yaml
+  - httproute-grafana.yaml
+  - httproute-prometheus.yaml
+  - httproute-jaeger.yaml

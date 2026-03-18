@@ -195,13 +195,26 @@ scripts/k8s-deploy-kind.sh morphflow bcmode
 
 Observability overlay:
 ```bash
-kubectl apply -k deploy/k8s/overlays/observability --context kind-morphflow
+kubectl apply -k deploy/k8s/overlays/observability --context kind-local-dev
 ```
 
 주요 접속(NodePort):
 - Grafana: `http://localhost:30300`
 - Prometheus: `http://localhost:30901`
 - Jaeger UI: `http://localhost:30686`
+
+Networking overlay (MetalLB + Envoy Gateway + HTTPRoute):
+```bash
+kubectl apply -k deploy/k8s/overlays/networking --context kind-local-dev
+```
+
+또는 자동 대역 반영 + 적용:
+```bash
+make net-apply K8S_CONTEXT=kind-local-dev KIND_NETWORK=kind
+```
+
+상세 설치/검증 가이드:
+- `deploy/k8s/overlays/networking/README.md`
 
 포트 충돌 시:
 ```bash
