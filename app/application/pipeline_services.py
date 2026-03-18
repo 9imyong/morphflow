@@ -37,16 +37,35 @@ class InferencePipelineService:
 
         reserved = await self.idempotency_store.reserve_job_processing(job_id)
         if not reserved:
-            return True, None
+            async with self.session_factory() as session:
+                job_repository = SqlAlchemyJobRepository(session)
+                existing = await job_repository.get(job_id)
+                # Completed jobs are safe to ack; active/failed states should retry for lease takeover.
+                if existing is not None and existing.status == JobStatus.SUCCESS:
+                    return True, None
+            return False, "IN_PROGRESS_LOCK"
 
         try:
             request_payload = event["payload"]["request"]
-            inference_result = await self.processor.process(request_payload)
-
             async with self.session_factory() as session:
                 job_repository = SqlAlchemyJobRepository(session)
                 event_repository = SqlAlchemyJobEventRepository(session)
                 await job_repository.update_status(job_id, JobStatus.PROCESSING.value)
+                await event_repository.add(
+                    build_event(
+                        job_id=job_id,
+                        event_type=EventType.PROCESSING_STARTED,
+                        source="inference-worker",
+                        trace_id=trace_id,
+                        payload={},
+                    )
+                )
+                await session.commit()
+
+            inference_result = await self.processor.process(request_payload)
+
+            async with self.session_factory() as session:
+                event_repository = SqlAlchemyJobEventRepository(session)
                 await event_repository.add(
                     build_event(
                         job_id=job_id,

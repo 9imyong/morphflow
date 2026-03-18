@@ -30,7 +30,14 @@ class WorkerService:
 
         reserved = await self.idempotency_store.reserve_job_processing(job_id)
         if not reserved:
-            return True, None
+            async with self.session_factory() as session:
+                job_repository = SqlAlchemyJobRepository(session)
+                existing = await job_repository.get(job_id)
+                # Already completed jobs are safe to ack/commit.
+                if existing is not None and existing.status == JobStatus.SUCCESS:
+                    return True, None
+            # Keep message in retry path until lock expires/takeover is possible.
+            return False, "IN_PROGRESS_LOCK"
 
         started_at = perf_counter()
         try:
