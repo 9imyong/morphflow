@@ -12,3 +12,5 @@ resources:
   - kafka.yaml
   - api.yaml
   - worker.yaml
+  - hpa-api.yaml
+  - hpa-worker.yaml

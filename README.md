@@ -198,6 +198,13 @@ Observability overlay:
 kubectl apply -k deploy/k8s/overlays/observability --context kind-local-dev
 ```
 
+HPA 확인:
+```bash
+kubectl get hpa -n morphflow --context kind-local-dev
+```
+
+참고: HPA 동작을 위해 cluster에 `metrics-server`가 필요하다.
+
 주요 접속(NodePort):
 - Grafana: `http://localhost:30300`
 - Prometheus: `http://localhost:30901`

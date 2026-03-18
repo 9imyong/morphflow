@@ -28,6 +28,13 @@ spec:
           image: morphflow-app:kind
           imagePullPolicy: IfNotPresent
           command: ["python", "-m", "app.workers.runner"]
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
           ports:
             - containerPort: 9000
           envFrom:
