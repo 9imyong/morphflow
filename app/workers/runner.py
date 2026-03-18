@@ -79,6 +79,8 @@ async def _handle_message(
             span.set_attribute("kafka.topic", message.topic)
             span.set_attribute("kafka.partition", message.partition)
             span.set_attribute("worker.group_id", consumer_group)
+            span.set_attribute("worker.role", settings.worker_role)
+            span.set_attribute("architecture.mode", settings.architecture_mode)
             if isinstance(message.value, dict):
                 job_id = message.value.get("job_id")
                 if job_id:

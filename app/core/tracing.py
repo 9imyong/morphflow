@@ -60,12 +60,22 @@ def setup_fastapi_tracing(app: Any, settings: Settings) -> None:
 
 
 def setup_worker_tracing(settings: Settings) -> Any:
-    provider = _build_provider(settings, settings.otel_service_name_worker)
+    service_name = settings.otel_service_name_worker
+    # Keep backward compatibility while splitting worker traces by role.
+    if service_name == "morphflow-worker":
+        service_name = f"morphflow-worker-{settings.worker_role}"
+
+    provider = _build_provider(settings, service_name)
     if provider is None:
         return None
     trace.set_tracer_provider(provider)
-    logger.info("OpenTelemetry tracing enabled for worker endpoint=%s", settings.otel_exporter_otlp_endpoint)
-    return trace.get_tracer(settings.otel_service_name_worker)
+    logger.info(
+        "OpenTelemetry tracing enabled for worker endpoint=%s service_name=%s role=%s",
+        settings.otel_exporter_otlp_endpoint,
+        service_name,
+        settings.worker_role,
+    )
+    return trace.get_tracer(service_name)
 
 
 def instrument_runtime_libraries(*, engine: Any | None = None, redis_client: Any | None = None) -> None:
