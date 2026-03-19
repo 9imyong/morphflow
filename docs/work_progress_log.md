@@ -470,3 +470,48 @@
 - 메모/이슈:
   - `metallb-ip-pool.yaml`의 주소 대역은 `docker network inspect kind` 결과에 맞춰 조정해야 한다.
   - Envoy Gateway quickstart 설치 전에는 Gateway API 리소스 적용 시 CRD 오류가 발생할 수 있다.
+
+### [Task-20260319-24] Worker lock 경합 복구 경로 보강
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-19
+- 최근 업데이트: 2026-03-19
+- 목표(DoD): `reserved=False`를 성공 처리하지 않고 재시도/lease takeover 가능한 복구 경로로 동작시킨다.
+- 작업 단위:
+  - [x] WU-1: `worker_service`에서 lock reserve 실패 시 `SUCCESS` 상태만 ack, 그 외는 `IN_PROGRESS_LOCK` 반환
+  - [x] WU-2: `pipeline_services(inference)`에도 동일한 lock reserve 실패 분기 적용
+  - [x] WU-3: inference 장시간 처리 전에 `PROCESSING_STARTED` 이벤트를 선기록하도록 순서 조정
+  - [x] WU-4: 회귀 테스트 실행(`tests/test_c_architecture_flow.py`, `tests/test_retry_runtime.py`, `tests/test_api_worker_integration.py`)
+- 메모/이슈:
+  - lock 경합 시 메시지가 조용히 소실되는 경로를 제거하고 retry 토픽 경유 복구 경로를 강제했다.
+  - 검증 결과: `uv run pytest -q ...` (`10 passed`)
+
+### [Task-20260319-25] Kind 이미지 재빌드/배포 Make 워크플로 정리
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-19
+- 최근 업데이트: 2026-03-19
+- 목표(DoD): 코드 변경 후 이미지 빌드/Kind 로드/배포를 make 명령으로 일관되게 실행할 수 있게 한다.
+- 작업 단위:
+  - [x] WU-1: `Makefile`에 `kind-image-build`, `kind-image-load`, `kind-rebuild` 타깃 추가
+  - [x] WU-2: `kind-deploy`, `kind-rebuild-deploy` 타깃 추가
+  - [x] WU-3: 기본 변수(`KIND_CLUSTER`, `APP_IMAGE`, `K8S_OVERLAY`) 정리
+- 메모/이슈:
+  - 실사용 흐름은 `make kind-rebuild` 또는 `make kind-rebuild-deploy`.
+  - 필요 시 `K8S_OVERLAY=observability`처럼 오버레이를 바꿔 재배포한다.
+
+### [Task-20260319-26] CI 워크플로 분리 및 K8s 매니페스트 검증 추가
+- 상태: DONE
+- 진행도: 100%
+- 담당: 김용준
+- 시작일: 2026-03-19
+- 최근 업데이트: 2026-03-19
+- 목표(DoD): CI 실패 원인을 빠르게 식별할 수 있도록 테스트/마이그레이션/매니페스트 검증을 분리한다.
+- 작업 단위:
+  - [x] WU-1: 단일 CI 잡을 `unit-tests` / `migration-check`로 분리
+  - [x] WU-2: `k8s-manifest-validate` 잡 추가(`deploy/k8s` 전 경로 `kubectl kustomize` 렌더 확인)
+  - [x] WU-3: 워크플로 공통 안정화 설정(`workflow_dispatch`, concurrency cancel-in-progress, timeout, pip cache) 반영
+- 메모/이슈:
+  - 현재는 렌더 검증 중심이며, CRD 스키마 기반 엄격 검증과 kind smoke test는 차기 작업으로 분리한다.
