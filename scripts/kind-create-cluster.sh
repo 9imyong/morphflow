@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="${1:-morphflow}"
+CLUSTER_NAME="${1:-local-dev}"
 K8S_NODE_IMAGE="${K8S_NODE_IMAGE:-kindest/node:v1.35.0}"
 HOST_API_PORT="${HOST_API_PORT:-18000}"
 

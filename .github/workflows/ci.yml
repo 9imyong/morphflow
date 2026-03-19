@@ -38,6 +38,30 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+  static-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Syntax compile check
+        run: python -m compileall -q app scripts tests
+
+      - name: Dependency integrity check
+        run: python -m pip check
+
   migration-check:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="${1:-morphflow}"
+CLUSTER_NAME="${1:-local-dev}"
 APP_IMAGE="${APP_IMAGE:-morphflow-app:kind}"
 DEPENDENCY_IMAGES=(
   "postgres:16-alpine"

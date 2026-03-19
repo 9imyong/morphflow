@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="${1:-morphflow}"
+CLUSTER_NAME="${1:-local-dev}"
 OVERLAY="${2:-base}"
 NAMESPACE="${NAMESPACE:-morphflow}"
 WITH_MIGRATE="${WITH_MIGRATE:-false}"

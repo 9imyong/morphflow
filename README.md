@@ -158,16 +158,16 @@ alembic downgrade -1
 ### 실행 순서
 ```bash
 # 1) kind 클러스터 생성
-scripts/kind-create-cluster.sh morphflow
+scripts/kind-create-cluster.sh local-dev
 
 # 2) 앱 이미지 빌드
 docker build -t morphflow-app:kind .
 
 # 3) kind 노드로 이미지 로드
-scripts/kind-load-images.sh morphflow
+scripts/kind-load-images.sh local-dev
 
 # 4) 기본(A) 배포 (migrate 생략)
-scripts/k8s-deploy-kind.sh morphflow base
+scripts/k8s-deploy-kind.sh local-dev base
 ```
 
 검증:
@@ -178,19 +178,19 @@ curl -s http://localhost:18000/health/ready
 
 마이그레이션이 필요한 경우(스키마 변경 시점):
 ```bash
-scripts/k8s-deploy-kind.sh morphflow base --with-migrate
+scripts/k8s-deploy-kind.sh local-dev base --with-migrate
 ```
 
 아키텍처 모드 overlay:
 ```bash
 # B 모드
-scripts/k8s-deploy-kind.sh morphflow bmode
+scripts/k8s-deploy-kind.sh local-dev bmode
 
 # C 모드 (downstream-worker 포함)
-scripts/k8s-deploy-kind.sh morphflow cmode
+scripts/k8s-deploy-kind.sh local-dev cmode
 
 # BC 모드 (downstream-worker 포함)
-scripts/k8s-deploy-kind.sh morphflow bcmode
+scripts/k8s-deploy-kind.sh local-dev bcmode
 ```
 
 Observability overlay:
@@ -225,7 +225,7 @@ make net-apply K8S_CONTEXT=kind-local-dev KIND_NETWORK=kind
 
 포트 충돌 시:
 ```bash
-HOST_API_PORT=28000 scripts/kind-create-cluster.sh morphflow
+HOST_API_PORT=28000 scripts/kind-create-cluster.sh local-dev
 ```
 
 전환 전략(Compose -> Kind -> k3s) 상세:
