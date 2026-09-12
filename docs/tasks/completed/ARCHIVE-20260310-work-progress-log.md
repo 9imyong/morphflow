@@ -1,6 +1,42 @@
-# 작업 진행도/작업 단위 기록 문서
+---
+id: ARCHIVE-20260310
+title: 작업 진행 기록 아카이브 (2026-03-10 ~ 2026-03-19)
+status: Done
+owner: 김용준
+created: 2026-03-10
+updated: 2026-03-19
+---
+
+# 아카이브: 작업 진행 기록 (2026-03-10 ~ 2026-03-19)
+
+> **이 문서는 현재 시스템 동작의 기준이 아닙니다.**
+>
+> 문서 체계를 정리하기 전에 사용하던 단일 작업 로그를 이력 보존 목적으로 옮긴 것입니다.
+> 현재 구조는 [아키텍처](../../architecture/README.md), 결정의 이유는 [ADR](../../decisions/README.md),
+> 계약은 [기술 명세](../../specs/README.md)를 기준으로 확인하십시오.
+>
+> 이 기록에는 이후 구현이 달라진 서술이 포함되어 있습니다. 예를 들어 초기 항목의
+> 컨슈머 그룹 이름과 토픽 매핑은 현재 코드와 다릅니다. 정정된 내용은
+> [ADR-0004](../../decisions/ADR-0004-fixed-ingress-topic-and-group.md)에 있습니다.
+>
+> 최근 작업 5건은 개별 문서로 분리했습니다.
+>
+> - [TASK-20260317-21](TASK-20260317-21-compose-to-kind.md)
+> - [TASK-20260317-22](TASK-20260317-22-k8s-overlays.md)
+> - [TASK-20260318-23](TASK-20260318-23-networking-overlay.md)
+> - [TASK-20260319-24](TASK-20260319-24-worker-lock-recovery.md)
+> - [TASK-20260319-26](TASK-20260319-26-ci-split.md)
+
+## 수록 범위
+
+- 기간: 2026-03-10 ~ 2026-03-19
+- 작업 수: 26건 (모두 완료)
+- 원본 위치: `docs/work_progress_log.md`
+
+---
 
 ## 1. 목적
+
 이 문서는 작업 상태를 빠르게 이해할 수 있도록, 다음 두 가지를 표준 형식으로 기록한다.
 
 1. 작업 진행도(%)와 상태
@@ -38,6 +74,7 @@
 - 완료 기준(DoD)이 한 줄로 정의 가능
 
 권장 크기:
+
 - 30분~2시간 내 완료 가능한 크기
 
 ---
@@ -47,7 +84,9 @@
 아래 형식으로 항목을 추가한다.
 
 ```md
+
 ### [Task-YYYYMMDD-번호] 작업 제목
+
 - 상태: TODO | IN_PROGRESS | BLOCKED | DONE
 - 진행도: 0~100%
 - 담당: 김용준 / 사용자명
@@ -60,6 +99,7 @@
   - [ ] WU-3: 작업 단위 설명
 - 메모/이슈:
   - 이슈 또는 결정사항
+
 ```
 
 ---
@@ -67,6 +107,7 @@
 ## 6. 현재 작업 기록
 
 ### [Task-20260310-01] 작업 진행도/작업 단위 문서화
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -82,6 +123,7 @@
   - 이후 작업부터 본 문서에 동일 포맷으로 누적 기록
 
 ### [Task-20260310-02] Kafka KRaft 전환(ZooKeeper 제거, 4.0.0)
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -97,6 +139,7 @@
   - 단일 브로커 KRaft 구성으로 로컬 개발 환경 기준
 
 ### [Task-20260310-03] 운영용 Compose 기본 구성 추가
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -112,6 +155,7 @@
   - 현재는 단일 노드 운영 기본안이며, HA/replication은 후속 작업 범위
 
 ### [Task-20260310-04] A 아키텍처 E2E 실행 검증
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -133,6 +177,7 @@
   - Kafka consumer group(`architecture-a-worker`) lag=0 확인
 
 ### [Task-20260310-05] Observability 스택 구축
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -150,6 +195,7 @@
   - Kafka lag/Redis/Postgres exporter 스크랩 대상은 Prometheus 설정에 반영
 
 ### [Task-20260310-06] Observability 완성(Exporter + 알람/대시보드)
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -167,6 +213,7 @@
   - `worker_job_processing_seconds_bucket`는 워커 측 해당 metric이 존재할 때 `WorkerProcessingTimeHigh` 알람이 실측 동작
 
 ### [Task-20260310-07] DB 마이그레이션 체계 도입
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -185,6 +232,7 @@
   - 기존 create_all 기반 DB가 이미 존재하는 환경은 `alembic stamp head` 또는 DB 재초기화 후 적용 권장
 
 ### [Task-20260310-08] API/Worker 통합 테스트 보강
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -203,6 +251,7 @@
   - 실행 검증: `uv run --extra dev pytest -q tests/test_api_worker_integration.py tests/test_event_envelope.py` (`7 passed`)
 
 ### [Task-20260310-09] CI 검증 파이프라인 추가
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -220,6 +269,7 @@
   - Postgres service container 기반으로 migration 검증 수행
 
 ### [Task-20260310-10] Readiness/운영 상태 점검 고도화
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -237,6 +287,7 @@
   - 실행 검증: `uv run --extra dev pytest -q tests/test_health_readiness.py tests/test_api_worker_integration.py tests/test_event_envelope.py` (`9 passed`)
 
 ### [Task-20260310-11] A/B/C 확장 포인트 코드 구조화
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -254,6 +305,7 @@
   - 실행 검증: `uv run --extra dev pytest -q tests/test_worker_roles.py tests/test_health_readiness.py tests/test_api_worker_integration.py tests/test_event_envelope.py` (`12 passed`)
 
 ### [Task-20260310-12] 장애 시나리오별 Runbook 문서화
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -271,6 +323,7 @@
   - 각 시나리오에 A/B/C 전환 판단 기준을 연결해 운영 의사결정 근거를 명시
 
 ### [Task-20260310-13] 부하 테스트 및 성능 지표 수집
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -288,6 +341,7 @@
   - 보고서: `docs/perf_test_report_20260310.md` (k6 수치 + Prometheus 지표 + A/B/C 전환 판단 포함)
 
 ### [Task-20260310-14] GPU 추론 최소 연결 및 B 아키텍처 검증
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -306,6 +360,7 @@
   - B 모드 50VU에서 실패율(약 0.35%) 및 inference lag 누적 재현으로 병목 검증 가능 상태 확인
 
 ### [Task-20260310-15] Retry / DLQ 전략 구현
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -324,6 +379,7 @@
   - 실패 시 idempotency lock은 해제해 retry 처리 가능하도록 조정
 
 ### [Task-20260310-16] C 아키텍처 최소 실구현
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -344,6 +400,7 @@
   - compose 실행용 override: `deploy/docker-compose.cmode.override.yml`
 
 ### [Task-20260310-17] 운영/아키텍처 최종 정리 및 문서 패키징
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -363,6 +420,7 @@
   - C 모드는 현재 시나리오 검증까지 완료, k6 부하 실측은 후속 태스크로 권장
 
 ### [Task-20260310-18] Dummy Processor를 Inference Simulator로 대체
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -380,6 +438,7 @@
   - 검증 결과: `uv run --extra dev pytest -q ...` (`22 passed`)
 
 ### [Task-20260310-19] C 아키텍처 부하 테스트 실측
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -397,6 +456,7 @@
   - downstream worker metric 수집을 위해 `deploy/observability/prometheus.yml`의 worker scrape target에 `downstream-worker:9001` 추가
 
 ### [Task-20260312-20] B 모드 배치 처리 적용(Kafka consume batch + GPU micro-batch)
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -416,6 +476,7 @@
   - 운영 튜닝/롤백 절차는 `docs/incident_runbook_abctransition.md`의 `3.7 B 모드 배치 처리 튜닝/롤백`에 반영했다.
 
 ### [Task-20260317-21] Compose 기반 스택의 Kind 배포 전환
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -438,6 +499,7 @@
   - Observability 전체(EFK/Jaeger/exporter)는 2차 이관 대상으로 분리했고, 1차는 core dependency + app 경로를 고정했다.
 
 ### [Task-20260317-22] K8s Overlay 추가(B/C/BC + Observability)
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -455,6 +517,7 @@
   - observability overlay는 kustomize 보안 제한(load restrictor)을 고려해 설정 파일을 overlay 내부 `configs/`로 복제해 관리한다.
 
 ### [Task-20260318-23] Networking Overlay 추가(MetalLB + Envoy Gateway)
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -472,6 +535,7 @@
   - Envoy Gateway quickstart 설치 전에는 Gateway API 리소스 적용 시 CRD 오류가 발생할 수 있다.
 
 ### [Task-20260319-24] Worker lock 경합 복구 경로 보강
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -488,6 +552,7 @@
   - 검증 결과: `uv run pytest -q ...` (`10 passed`)
 
 ### [Task-20260319-25] Kind 이미지 재빌드/배포 Make 워크플로 정리
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준
@@ -503,6 +568,7 @@
   - 필요 시 `K8S_OVERLAY=observability`처럼 오버레이를 바꿔 재배포한다.
 
 ### [Task-20260319-26] CI 워크플로 분리 및 K8s 매니페스트 검증 추가
+
 - 상태: DONE
 - 진행도: 100%
 - 담당: 김용준

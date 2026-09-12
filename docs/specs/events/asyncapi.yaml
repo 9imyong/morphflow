@@ -1,0 +1,151 @@
+asyncapi: 3.0.0
+info:
+  title: Morphflow 이벤트 계약
+  version: 0.1.0
+  description: |-
+    작업 처리 파이프라인의 Kafka 메시지 계약입니다.
+
+    모든 채널은 동일한 Envelope 구조를 사용하며 `event_type`으로 의미를 구분합니다.
+    Envelope 구조는 아키텍처 모드(A/B/C/BC)와 무관하게 유지됩니다.
+
+    전달 보장과 중복 처리 규칙은 `docs/specs/events/job-events.md`를 참조합니다.
+defaultContentType: application/json
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+    description: KRaft 단일 브로커 (로컬 검증 환경)
+channels:
+  requestTopic:
+    address: request-topic
+    description: |-
+      작업 접수 이벤트. 모든 아키텍처 모드에서 API가 발행하는 유일한 진입 채널입니다.
+      `unified` 또는 `inference` 역할 워커가 `architecture-main-worker` 그룹으로 소비합니다.
+    messages:
+      jobRequested:
+        $ref: '#/components/messages/JobEvent'
+  downstreamTopic:
+    address: downstream-topic
+    description: |-
+      추론 완료 이벤트. C·BC 모드에서만 사용하며 추론 워커가 발행합니다.
+      `downstream` 역할 워커가 `architecture-main-worker-downstream` 그룹으로 소비합니다.
+    messages:
+      inferenceCompleted:
+        $ref: '#/components/messages/JobEvent'
+  retryTopic:
+    address: retry-topic
+    description: 추론 경로의 재시도 채널. 원본과 동일한 payload에 재시도 헤더가 추가됩니다.
+    messages:
+      retried:
+        $ref: '#/components/messages/JobEvent'
+  retryDownstreamTopic:
+    address: retry-downstream-topic
+    description: 후단 경로의 재시도 채널.
+    messages:
+      retried:
+        $ref: '#/components/messages/JobEvent'
+  dlqTopic:
+    address: dlq-topic
+    description: |-
+      재시도 한도를 초과한 메시지의 격리 채널.
+      원본 payload를 변형 없이 보존하며 실패 정보는 헤더에만 담깁니다.
+    messages:
+      deadLettered:
+        $ref: '#/components/messages/JobEvent'
+operations:
+  publishJobRequested:
+    action: send
+    channel:
+      $ref: '#/channels/requestTopic'
+    summary: API가 작업 접수 사실을 발행
+  consumeJobRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/requestTopic'
+    summary: 워커가 작업을 소비해 추론 수행
+  publishInferenceCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/downstreamTopic'
+    summary: 추론 워커가 후단 처리를 요청 (C·BC 모드)
+  consumeInferenceCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/downstreamTopic'
+    summary: 후단 워커가 최종 완료 처리
+  publishRetry:
+    action: send
+    channel:
+      $ref: '#/channels/retryTopic'
+    summary: 처리 실패 시 재시도 채널로 재발행
+  publishDlq:
+    action: send
+    channel:
+      $ref: '#/channels/dlqTopic'
+    summary: 재시도 한도 초과 시 격리
+components:
+  messages:
+    JobEvent:
+      name: JobEvent
+      title: 작업 이벤트 Envelope
+      contentType: application/json
+      headers:
+        type: object
+        description: 재시도 경로에서만 설정되는 헤더입니다.
+        properties:
+          retry-count:
+            type: string
+            description: 지금까지 수행된 재시도 횟수
+            examples: ['1']
+          original-topic:
+            type: string
+            description: 최초 발행 채널. 역할이 자신의 재시도 메시지를 구분하는 데 사용합니다.
+            examples: [request-topic]
+          error-reason:
+            type: string
+            description: 직전 실패 사유
+      payload:
+        $ref: '#/components/schemas/JobEventEnvelope'
+  schemas:
+    JobEventEnvelope:
+      type: object
+      required: [event_id, job_id, event_type, trace_id, source, created_at, payload]
+      additionalProperties: false
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: 이벤트 고유 식별자. `job_events.event_id`에 유니크 제약으로 저장됩니다.
+        job_id:
+          type: string
+          format: uuid
+          description: 연관 작업 식별자
+        event_type:
+          type: string
+          enum:
+            - REQUESTED
+            - PROCESSING_STARTED
+            - PROCESSING_COMPLETED
+            - INFERENCE_COMPLETED
+            - DOWNSTREAM_COMPLETED
+            - FAILED
+        trace_id:
+          type: string
+          description: |-
+            작업 흐름 상관관계 식별자입니다.
+            현재 값은 작업 생성 시 발급하는 UUID이며 OpenTelemetry 추적 ID와 동일하지 않습니다.
+        source:
+          type: string
+          enum: [api, worker, inference-worker, downstream-worker]
+          description: 이벤트 발행 주체
+        created_at:
+          type: string
+          format: date-time
+          description: 발행 시각 (UTC, ISO 8601)
+        payload:
+          type: object
+          additionalProperties: true
+          description: |-
+            단계별 데이터입니다. 채널과 `event_type`에 따라 내용이 다릅니다.
+            - `request-topic`: `{ "request": { ... 원본 요청 ... } }`
+            - `downstream-topic`: `{ "request": { ... }, "inference_result": { ... } }`

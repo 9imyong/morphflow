@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morphflow.local/schemas/job-event-envelope.json",
+  "title": "JobEventEnvelope",
+  "description": "모든 Kafka 메시지와 job_events 레코드가 공유하는 공통 봉투 구조",
+  "type": "object",
+  "required": ["event_id", "job_id", "event_type", "trace_id", "source", "created_at", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "이벤트 고유 식별자"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "연관 작업 식별자"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "REQUESTED",
+        "PROCESSING_STARTED",
+        "PROCESSING_COMPLETED",
+        "INFERENCE_COMPLETED",
+        "DOWNSTREAM_COMPLETED",
+        "FAILED"
+      ]
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "작업 흐름 상관관계 식별자"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["api", "worker", "inference-worker", "downstream-worker"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "examples": [
+    {
+      "event_id": "0d9a1d3c-1f0e-4a1e-9d6c-2b7a4f8e1c33",
+      "job_id": "5b2f7e10-3c44-4f5a-9a1b-6c8d2e4f7a90",
+      "event_type": "REQUESTED",
+      "trace_id": "9f3c1a20-7d55-4b2e-8c1f-3a5b7d9e0f12",
+      "source": "api",
+      "created_at": "2026-09-13T02:15:30.482913+00:00",
+      "payload": {
+        "request": {
+          "input": { "type": "text", "content": "hello morphflow" },
+          "options": { "priority": "normal" }
+        }
+      }
+    }
+  ]
+}
