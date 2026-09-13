@@ -110,7 +110,6 @@ async def test_duplicate_delivery_does_not_reprocess(
     )
     worker = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=SuccessProcessor(),
     )
 
@@ -139,7 +138,6 @@ async def test_failure_path_still_records_failed(
     )
     worker = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=FailingProcessor(),
     )
 

@@ -112,7 +112,6 @@ async def test_worker_success_path_updates_status_and_events(session_factory, id
     )
     worker_service = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=SuccessProcessor(),
     )
 
@@ -147,7 +146,6 @@ async def test_worker_failure_sets_failed_status(session_factory, idempotency_st
     )
     worker_service = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=FailingProcessor(),
     )
 
@@ -176,7 +174,6 @@ async def test_duplicate_consume_is_idempotent(session_factory, idempotency_stor
     )
     worker_service = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=SuccessProcessor(),
     )
 

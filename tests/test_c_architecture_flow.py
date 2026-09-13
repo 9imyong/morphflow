@@ -25,7 +25,6 @@ async def test_c_pipeline_inference_to_downstream_to_success(session_factory, id
     )
     inference_service = InferencePipelineService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=InferenceSuccessProcessor(),
         downstream_topic="downstream-topic",
     )

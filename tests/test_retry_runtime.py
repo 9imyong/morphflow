@@ -46,7 +46,6 @@ async def test_worker_can_retry_after_failed_attempt(session_factory, idempotenc
     )
     worker_service = WorkerService(
         session_factory=session_factory,
-        idempotency_store=idempotency_store,
         processor=FlakyProcessor(),
     )
 
