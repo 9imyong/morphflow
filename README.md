@@ -95,6 +95,43 @@ docker exec -i $(docker compose -f docker-compose.dev.yml ps -q kafka) \
   --topic request-topic
 ```
 
+## 4-1. 상태 정합성과 발행 보장
+
+### 조건부 상태 전이 (CAS)
+
+`jobs.status` 갱신은 전부 조건부 UPDATE 로만 한다. 허용된 출발 상태를 `WHERE` 에
+걸고, 바뀐 행이 없으면 경쟁에서 밀린 것으로 보고 그대로 종료한다.
+
+```
+PENDING    -> PROCESSING, FAILED
+PROCESSING -> SUCCESS, FAILED, PROCESSING
+SUCCESS    -> (종착)
+```
+
+읽고-바꾸고-쓰는 방식이던 때는, lease 만료나 재시도로 같은 job 을 두 워커가
+잡으면 늦게 끝난 쪽이 앞선 결과를 덮어썼다. 성공한 작업이 FAILED 로 기록되는
+일이 여기서 나온다. 밀린 전이는 `job_transition_conflict_total` 로 센다.
+
+### 트랜잭셔널 아웃박스
+
+DB 와 Kafka 는 한 트랜잭션에 묶이지 않는다. 그래서 발행할 메시지를 상태 변경과
+**같은 트랜잭션**에 `outbox_messages` 로 적재하고, 릴레이가 커밋된 행을 읽어
+Kafka 로 내보낸다.
+
+- 커밋 직후 프로세스가 죽어도 행이 `PENDING` 으로 남아 다음 주기에 나간다
+- 발행 실패 시 상태를 바꾸지 않고 `attempts` 만 올려 재시도한다
+- 배치 중간이 실패하면 뒤 메시지를 먼저 보내지 않아 순서가 뒤집히지 않는다
+- 릴레이가 여러 개 떠도 `FOR UPDATE SKIP LOCKED` 로 같은 행을 집지 않는다
+
+전달 보장은 at-least-once 다. 같은 메시지가 두 번 나갈 수 있으므로 소비 측
+멱등 처리(작업 선점 CAS, Redis 예약)가 함께 있어야 한다.
+
+관련 설정: `OUTBOX_RELAY_BATCH_SIZE`, `OUTBOX_RELAY_POLL_INTERVAL_SECONDS`
+관련 메트릭: `outbox_published_total`, `outbox_publish_failure_total`,
+`outbox_pending_backlog`
+
+마이그레이션: `alembic upgrade head` (revision `20260913_0002`)
+
 ## 5. Observability 구조
 
 ### 구성
