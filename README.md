@@ -133,6 +133,26 @@ SUCCESS    -> (종착)
 잡으면 늦게 끝난 쪽이 앞선 결과를 덮어썼다. 성공한 작업이 FAILED 로 기록되는
 일이 여기서 나온다. 밀린 전이는 `job_transition_conflict_total` 로 센다.
 
+### 작업 소유권 (lease + 펜싱 토큰)
+
+작업 선점은 Redis SETNX 가 아니라 `jobs` 행의 lease 로 한다. Redis TTL 방식은
+TTL 이 만료되는 순간 두 워커가 같은 job 을 동시에 처리하는 것을 막지 못했고,
+뒤늦게 끝난 쪽이 인계받은 워커의 결과를 덮어썼다.
+
+- 선점: `PENDING`/`FAILED` 이거나 lease 가 만료된 `PROCESSING` 일 때만 성공.
+  성공하면 `lease_epoch` 가 1 증가한다(펜싱 토큰)
+- 결과 기록: `WHERE lease_owner = ? AND lease_epoch = ?` 를 함께 건다.
+  소유권을 빼앗긴 워커의 쓰기는 조건에서 탈락한다
+- 회수: lease 만료는 앞선 워커가 죽은 것으로 본다 (`job_lease_takeover_total`)
+- 살아 있는 lease 를 만나면 `LEASE_HELD` 로 재시도 경로에 넘긴다
+
+상태 조건(CAS)만으로는 부족하다. 인계 직후 상태는 여전히 `PROCESSING` 이라
+옛 소유자의 `SUCCESS` 쓰기가 상태 조건은 통과하기 때문이다. 이를 막는 것은
+epoch 비교뿐이다.
+
+lease 만료 판정에는 각 워커의 시계를 쓴다. 워커 간 시계가 크게 어긋나면
+회수 시점이 흔들리므로 NTP 동기화를 전제한다.
+
 ### 트랜잭셔널 아웃박스
 
 DB 와 Kafka 는 한 트랜잭션에 묶이지 않는다. 그래서 발행할 메시지를 상태 변경과
