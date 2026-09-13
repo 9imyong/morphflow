@@ -38,11 +38,10 @@ def test_retry_backoff_exponential_with_cap() -> None:
 
 
 @pytest.mark.asyncio
-async def test_worker_can_retry_after_failed_attempt(session_factory, idempotency_store, publisher) -> None:
+async def test_worker_can_retry_after_failed_attempt(session_factory, idempotency_store, publisher, outbox_relay) -> None:
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     worker_service = WorkerService(
@@ -55,6 +54,7 @@ async def test_worker_can_retry_after_failed_attempt(session_factory, idempotenc
         payload={"input": {"type": "text", "content": "retry-me"}, "options": {}},
         idempotency_key="retry-me-key",
     )
+    await outbox_relay.drain_once()
     event = publisher.published[-1][1]
 
     success_first, error_first = await worker_service.handle_event(event)

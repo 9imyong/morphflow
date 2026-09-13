@@ -8,6 +8,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.adapters.db.models import Base
+from app.adapters.messaging.outbox_relay import OutboxRelay
 from app.ports.idempotency import IdempotencyPort, IdempotencyRecord
 from app.ports.publisher import EventPublisherPort
 from app.ports.task_processor import TaskProcessorPort
@@ -93,3 +94,14 @@ def idempotency_store() -> InMemoryIdempotencyStore:
 @pytest.fixture
 def publisher() -> CapturingPublisher:
     return CapturingPublisher()
+
+
+@pytest.fixture
+def outbox_relay(session_factory, publisher) -> OutboxRelay:
+    """테스트에서는 루프를 돌리지 않고 drain_once() 로 한 배치씩 비운다."""
+    return OutboxRelay(
+        session_factory=session_factory,
+        publisher=publisher,
+        batch_size=100,
+        poll_interval_seconds=0.01,
+    )

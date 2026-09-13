@@ -34,11 +34,10 @@ class AppTestContainer:
 
 
 @pytest.fixture
-def app_with_job_service(session_factory, idempotency_store, publisher):
+def app_with_job_service(session_factory, idempotency_store, publisher, outbox_relay):
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     app = FastAPI()
@@ -105,11 +104,10 @@ async def test_duplicate_idempotency_key_returns_same_job_id(app_with_job_servic
 
 
 @pytest.mark.asyncio
-async def test_worker_success_path_updates_status_and_events(session_factory, idempotency_store, publisher):
+async def test_worker_success_path_updates_status_and_events(session_factory, idempotency_store, publisher, outbox_relay):
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     worker_service = WorkerService(
@@ -124,6 +122,7 @@ async def test_worker_success_path_updates_status_and_events(session_factory, id
     )
     assert created.status == JobStatus.PENDING
 
+    await outbox_relay.drain_once()
     event = publisher.published[-1][1]
     await worker_service.handle_event(event)
 
@@ -140,11 +139,10 @@ async def test_worker_success_path_updates_status_and_events(session_factory, id
 
 
 @pytest.mark.asyncio
-async def test_worker_failure_sets_failed_status(session_factory, idempotency_store, publisher):
+async def test_worker_failure_sets_failed_status(session_factory, idempotency_store, publisher, outbox_relay):
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     worker_service = WorkerService(
@@ -158,6 +156,7 @@ async def test_worker_failure_sets_failed_status(session_factory, idempotency_st
         idempotency_key="worker-fail-key",
     )
 
+    await outbox_relay.drain_once()
     event = publisher.published[-1][1]
     await worker_service.handle_event(event)
 
@@ -169,11 +168,10 @@ async def test_worker_failure_sets_failed_status(session_factory, idempotency_st
 
 
 @pytest.mark.asyncio
-async def test_duplicate_consume_is_idempotent(session_factory, idempotency_store, publisher):
+async def test_duplicate_consume_is_idempotent(session_factory, idempotency_store, publisher, outbox_relay):
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     worker_service = WorkerService(
@@ -186,6 +184,7 @@ async def test_duplicate_consume_is_idempotent(session_factory, idempotency_stor
         payload={"input": {"type": "text", "content": "dup-consume"}, "options": {}},
         idempotency_key="dup-consume-key",
     )
+    await outbox_relay.drain_once()
     event = publisher.published[-1][1]
 
     await worker_service.handle_event(event)

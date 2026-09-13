@@ -17,18 +17,16 @@ class InferenceSuccessProcessor:
 
 
 @pytest.mark.asyncio
-async def test_c_pipeline_inference_to_downstream_to_success(session_factory, idempotency_store, publisher) -> None:
+async def test_c_pipeline_inference_to_downstream_to_success(session_factory, idempotency_store, publisher, outbox_relay) -> None:
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     inference_service = InferencePipelineService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
         processor=InferenceSuccessProcessor(),
-        publisher=publisher,
         downstream_topic="downstream-topic",
     )
     downstream_service = DownstreamPipelineService(
@@ -40,11 +38,13 @@ async def test_c_pipeline_inference_to_downstream_to_success(session_factory, id
         payload={"input": {"type": "text", "content": "c-path"}, "options": {}},
         idempotency_key="c-path-key",
     )
+    await outbox_relay.drain_once()
     inference_event = publisher.published[-1][1]
 
     inference_ok, inference_error = await inference_service.handle_event(inference_event)
     assert inference_ok is True
     assert inference_error is None
+    await outbox_relay.drain_once()
     assert publisher.published[-1][0] == "downstream-topic"
 
     mid_state = await job_service.get_job(created.id)

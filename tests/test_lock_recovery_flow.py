@@ -57,12 +57,11 @@ class InferenceSuccessProcessor:
 
 
 @pytest.mark.asyncio
-async def test_worker_lock_contention_retries_then_recovers(session_factory, publisher) -> None:
+async def test_worker_lock_contention_retries_then_recovers(session_factory, publisher, outbox_relay) -> None:
     idempotency_store = SequenceIdempotencyStore(reserve_outcomes=[False, True])
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     worker_service = WorkerService(
@@ -75,6 +74,7 @@ async def test_worker_lock_contention_retries_then_recovers(session_factory, pub
         payload={"input": {"type": "text", "content": "lock-recovery"}, "options": {}},
         idempotency_key="lock-recovery-worker-key",
     )
+    await outbox_relay.drain_once()
     event = publisher.published[-1][1]
 
     first_ok, first_error = await worker_service.handle_event(event)
@@ -95,19 +95,17 @@ async def test_worker_lock_contention_retries_then_recovers(session_factory, pub
 
 
 @pytest.mark.asyncio
-async def test_inference_lock_contention_retries_then_recovers(session_factory, publisher) -> None:
+async def test_inference_lock_contention_retries_then_recovers(session_factory, publisher, outbox_relay) -> None:
     idempotency_store = SequenceIdempotencyStore(reserve_outcomes=[False, True])
     job_service = JobService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
-        publisher=publisher,
         topic="request-topic",
     )
     inference_service = InferencePipelineService(
         session_factory=session_factory,
         idempotency_store=idempotency_store,
         processor=InferenceSuccessProcessor(),
-        publisher=publisher,
         downstream_topic="downstream-topic",
     )
 
@@ -115,6 +113,7 @@ async def test_inference_lock_contention_retries_then_recovers(session_factory, 
         payload={"input": {"type": "text", "content": "lock-recovery-inference"}, "options": {}},
         idempotency_key="lock-recovery-inference-key",
     )
+    await outbox_relay.drain_once()
     inference_event = publisher.published[-1][1]
 
     first_ok, first_error = await inference_service.handle_event(inference_event)
@@ -124,6 +123,7 @@ async def test_inference_lock_contention_retries_then_recovers(session_factory, 
     second_ok, second_error = await inference_service.handle_event(inference_event)
     assert second_ok is True
     assert second_error is None
+    await outbox_relay.drain_once()
     assert publisher.published[-1][0] == "downstream-topic"
 
     mid_state = await job_service.get_job(created.id)
