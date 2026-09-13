@@ -28,6 +28,14 @@ RETRY_PUBLISHED_TOTAL = Counter("retry_published_total", "Number of retry messag
 DLQ_MESSAGES_TOTAL = Counter("dlq_messages_total", "Number of messages sent to DLQ")
 RETRY_FAILURE_TOTAL = Counter("retry_failure_total", "Number of failed processing attempts")
 HTTP_REQUESTS_TOTAL = Counter("http_requests_total", "HTTP requests handled", ["method", "path", "status"])
+OUTBOX_PUBLISHED_TOTAL = Counter("outbox_published_total", "Messages relayed from the outbox to Kafka")
+OUTBOX_PUBLISH_FAILURE_TOTAL = Counter("outbox_publish_failure_total", "Outbox relay publish failures")
+OUTBOX_PENDING_BACKLOG = Gauge("outbox_pending_backlog", "Messages picked up as pending in the last relay pass")
+JOB_TRANSITION_CONFLICT_TOTAL = Counter(
+    "job_transition_conflict_total",
+    "Conditional status updates that changed no row (lost race or already advanced)",
+    ["target_status"],
+)
 
 
 def metrics_response() -> Response:

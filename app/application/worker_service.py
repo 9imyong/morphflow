@@ -5,7 +5,12 @@ from time import perf_counter
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.db.repositories import SqlAlchemyJobEventRepository, SqlAlchemyJobRepository
-from app.core.metrics import JOB_FAILURE_TOTAL, JOB_PROCESSING_SECONDS, JOB_SUCCESS_TOTAL
+from app.core.metrics import (
+    JOB_FAILURE_TOTAL,
+    JOB_PROCESSING_SECONDS,
+    JOB_SUCCESS_TOTAL,
+    JOB_TRANSITION_CONFLICT_TOTAL,
+)
 from app.domain.events import EventType, build_event
 from app.domain.models import JobStatus
 from app.ports.idempotency import IdempotencyPort
@@ -45,7 +50,13 @@ class WorkerService:
                 job_repository = SqlAlchemyJobRepository(session)
                 event_repository = SqlAlchemyJobEventRepository(session)
 
-                await job_repository.update_status(job_id, JobStatus.PROCESSING.value)
+                claimed = await job_repository.update_status(job_id, JobStatus.PROCESSING.value)
+                if claimed is None:
+                    # 이미 끝났거나 다른 워커가 선점했다. 다시 처리하지 않는다.
+                    JOB_TRANSITION_CONFLICT_TOTAL.labels(target_status=JobStatus.PROCESSING.value).inc()
+                    await session.rollback()
+                    await self.idempotency_store.complete_job_processing(job_id, success=False)
+                    return True, None
                 await event_repository.add(
                     build_event(
                         job_id=job_id,
