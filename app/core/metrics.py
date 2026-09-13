@@ -27,6 +27,9 @@ JOB_EVENT_PUBLISHED_TOTAL = Counter("job_events_published_total", "Number of Kaf
 RETRY_PUBLISHED_TOTAL = Counter("retry_published_total", "Number of retry messages published")
 DLQ_MESSAGES_TOTAL = Counter("dlq_messages_total", "Number of messages sent to DLQ")
 RETRY_FAILURE_TOTAL = Counter("retry_failure_total", "Number of failed processing attempts")
+RETRY_DEFERRED_TOTAL = Counter(
+    "retry_deferred_total", "Retry messages put back because their backoff window had not elapsed"
+)
 HTTP_REQUESTS_TOTAL = Counter("http_requests_total", "HTTP requests handled", ["method", "path", "status"])
 OUTBOX_PUBLISHED_TOTAL = Counter("outbox_published_total", "Messages relayed from the outbox to Kafka")
 OUTBOX_PUBLISH_FAILURE_TOTAL = Counter("outbox_publish_failure_total", "Outbox relay publish failures")
