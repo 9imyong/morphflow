@@ -59,6 +59,27 @@ docker compose -f docker-compose.dev.yml -f deploy/docker-compose.cmode.override
 - `retry-count`
 - `original-topic`
 - `error-reason`
+- `retry-at` — 이 시각(epoch ms) 전에는 처리하지 않는다
+
+### 백오프 처리
+
+백오프를 컨슈머 루프에서 `sleep` 으로 기다리면 그동안 poll 이 멈춘다. 지연이
+길어지면 `max_poll_interval_ms` 를 넘겨 리밸런스가 나고, 같은 컨슈머가 맡은
+다른 파티션까지 함께 멈춘다.
+
+그래서 재시도 메시지는 지연 없이 바로 발행하고 `retry-at` 만 실어 보낸다.
+소비 쪽에서 아직 때가 되지 않은 메시지를 만나면 offset 을 되돌리고 그
+**파티션만** 일시 정지시킨다. 시각이 지나면 자동으로 재개한다.
+(`retry_deferred_total`)
+
+### 오프셋 커밋
+
+파티션끼리는 병렬로, 한 파티션 안에서는 순서대로 처리한다. 배치 전체를
+한꺼번에 처리하면 같은 파티션의 순서가 뒤집혀 상태 전이가 어긋난다.
+
+커밋은 **성공한 접두부까지만** 한다. 중간에서 실패하면 그 지점으로 seek 해
+다음 poll 에서 다시 읽는다. 커밋만 건너뛰던 때는 컨슈머 위치가 이미 전진한
+뒤라 실패한 메시지를 영영 보지 못했다.
 
 ### 정책
 - retry backoff: exponential
