@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.db.models import JobEventModel, JobModel, OutboxMessageModel
-from app.domain.models import Job, JobStatus, allowed_source_statuses
+from app.domain.models import Job, JobLease, JobStatus, allowed_source_statuses
 
 # 행 잠금(SELECT ... FOR UPDATE SKIP LOCKED)을 지원하는 방언
 _ROW_LOCK_DIALECTS = frozenset({"postgresql", "mysql", "mariadb"})
@@ -54,6 +54,9 @@ class SqlAlchemyJobRepository:
         error: str | None = None,
         clear_error: bool = False,
         expected_statuses: Sequence[str] | None = None,
+        lease_owner: str | None = None,
+        lease_epoch: int | None = None,
+        release_lease: bool = False,
     ) -> Job | None:
         """조건부 UPDATE 로 상태를 바꾸고, 실제로 바뀐 경우에만 Job 을 돌려준다.
 
@@ -77,13 +80,19 @@ class SqlAlchemyJobRepository:
             values["error_message"] = None
         elif error is not None:
             values["error_message"] = error
+        if release_lease:
+            values["lease_owner"] = None
+            values["lease_expires_at"] = None
 
-        statement = (
-            update(JobModel)
-            .where(JobModel.id == job_id, JobModel.status.in_([s.value for s in sources]))
-            .values(**values)
-            .returning(JobModel)
-        )
+        conditions = [JobModel.id == job_id, JobModel.status.in_([s.value for s in sources])]
+        # 펜싱: lease 를 빼앗긴 워커가 뒤늦게 결과를 쓰지 못하게 막는다.
+        # epoch 은 선점할 때마다 올라가므로, 옛 소유자의 쓰기는 조건에서 탈락한다.
+        if lease_owner is not None:
+            conditions.append(JobModel.lease_owner == lease_owner)
+        if lease_epoch is not None:
+            conditions.append(JobModel.lease_epoch == lease_epoch)
+
+        statement = update(JobModel).where(*conditions).values(**values).returning(JobModel)
         row = (await self.session.execute(statement)).scalar_one_or_none()
         if row is None:
             # 행이 없거나, 이미 다른 전이가 일어나 조건을 벗어났다.
@@ -98,6 +107,63 @@ class SqlAlchemyJobRepository:
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
+
+
+    async def claim_for_processing(
+        self, job_id: str, *, owner: str, lease_seconds: int
+    ) -> JobLease | None:
+        """job 을 선점하고 펜싱 토큰을 돌려준다.
+
+        선점 가능한 경우는 세 가지다.
+        - 아직 시작되지 않음(PENDING)
+        - 이전 시도가 실패로 끝남(FAILED)
+        - PROCESSING 이지만 lease 가 만료됨 = 앞선 워커가 죽었다고 본다
+
+        SUCCESS 이거나 다른 워커의 lease 가 살아 있으면 None 이다.
+        """
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(seconds=lease_seconds)
+        takeover = and_(
+            JobModel.status == JobStatus.PROCESSING.value,
+            or_(JobModel.lease_expires_at.is_(None), JobModel.lease_expires_at < now),
+        )
+        statement = (
+            update(JobModel)
+            .where(
+                JobModel.id == job_id,
+                or_(
+                    JobModel.status.in_([JobStatus.PENDING.value, JobStatus.FAILED.value]),
+                    takeover,
+                ),
+            )
+            .values(
+                status=JobStatus.PROCESSING.value,
+                lease_owner=owner,
+                lease_expires_at=expires_at,
+                lease_epoch=JobModel.lease_epoch + 1,
+                updated_at=func.now(),
+            )
+            .returning(JobModel)
+        )
+        row = (await self.session.execute(statement)).scalar_one_or_none()
+        if row is None:
+            return None
+        return JobLease(job_id=row.id, owner=owner, epoch=row.lease_epoch, expires_at=row.lease_expires_at)
+
+    async def renew_lease(self, job_id: str, *, owner: str, epoch: int, lease_seconds: int) -> bool:
+        """처리가 길어질 때 소유권을 연장한다. 이미 빼앗겼으면 False."""
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=lease_seconds)
+        statement = (
+            update(JobModel)
+            .where(
+                JobModel.id == job_id,
+                JobModel.lease_owner == owner,
+                JobModel.lease_epoch == epoch,
+            )
+            .values(lease_expires_at=expires_at)
+            .returning(JobModel.id)
+        )
+        return (await self.session.execute(statement)).scalar_one_or_none() is not None
 
 
 class SqlAlchemyJobEventRepository:

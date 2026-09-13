@@ -34,6 +34,9 @@ HTTP_REQUESTS_TOTAL = Counter("http_requests_total", "HTTP requests handled", ["
 OUTBOX_PUBLISHED_TOTAL = Counter("outbox_published_total", "Messages relayed from the outbox to Kafka")
 OUTBOX_PUBLISH_FAILURE_TOTAL = Counter("outbox_publish_failure_total", "Outbox relay publish failures")
 OUTBOX_PENDING_BACKLOG = Gauge("outbox_pending_backlog", "Messages picked up as pending in the last relay pass")
+JOB_LEASE_TAKEOVER_TOTAL = Counter(
+    "job_lease_takeover_total", "Jobs reclaimed because the previous owner's lease had expired"
+)
 JOB_TRANSITION_CONFLICT_TOTAL = Counter(
     "job_transition_conflict_total",
     "Conditional status updates that changed no row (lost race or already advanced)",

@@ -17,6 +17,13 @@ class JobModel(Base):
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 작업 소유권(lease). Redis SETNX 는 TTL 이 만료되면 두 워커가 같은 job 을
+    # 동시에 처리해도 막지 못했다. 소유자와 만료 시각을 job 행에 두고,
+    # 결과 기록 시 lease_epoch 를 함께 검사해 만료된 워커의 쓰기를 차단한다.
+    lease_owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 선점할 때마다 증가하는 펜싱 토큰.
+    lease_epoch: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()

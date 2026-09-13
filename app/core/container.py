@@ -34,10 +34,6 @@ class AppContainer:
     def worker_service(self) -> WorkerService:
         return WorkerService(
             session_factory=self.session_factory,
-            idempotency_store=RedisIdempotencyStore(
-                redis=self.redis,
-                ttl_seconds=self.settings.idempotency_ttl_seconds,
-                processing_ttl_seconds=self.settings.worker_processing_ttl_seconds,
-            ),
+            lease_seconds=self.settings.worker_processing_ttl_seconds,
             processor=build_primary_processor(self.settings),
         )

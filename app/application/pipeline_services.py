@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from app.adapters.db.repositories import (
     SqlAlchemyJobEventRepository,
     SqlAlchemyJobRepository,
@@ -10,11 +12,11 @@ from app.core.metrics import (
     DOWNSTREAM_FAILURE_TOTAL,
     DOWNSTREAM_SUCCESS_TOTAL,
     JOB_FAILURE_TOTAL,
+    JOB_LEASE_TAKEOVER_TOTAL,
     JOB_TRANSITION_CONFLICT_TOTAL,
 )
 from app.domain.events import EventType, build_event
 from app.domain.models import JobStatus
-from app.ports.idempotency import IdempotencyPort
 from app.ports.task_processor import TaskProcessorPort
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -24,52 +26,53 @@ class InferencePipelineService:
         self,
         *,
         session_factory: async_sessionmaker[AsyncSession],
-        idempotency_store: IdempotencyPort,
         processor: TaskProcessorPort,
         downstream_topic: str,
+        lease_seconds: int = 1800,
+        worker_id: str | None = None,
     ) -> None:
         self.session_factory = session_factory
-        self.idempotency_store = idempotency_store
         self.processor = processor
         self.downstream_topic = downstream_topic
+        self.lease_seconds = lease_seconds
+        # 프로세스마다 고유해야 펜싱이 의미를 갖는다.
+        self.worker_id = worker_id or f"inference-{uuid4()}"
 
     async def handle_event(self, event: dict) -> tuple[bool, str | None]:
         job_id = event["job_id"]
         trace_id = event["trace_id"]
 
-        reserved = await self.idempotency_store.reserve_job_processing(job_id)
-        if not reserved:
-            async with self.session_factory() as session:
-                job_repository = SqlAlchemyJobRepository(session)
+        async with self.session_factory() as session:
+            job_repository = SqlAlchemyJobRepository(session)
+            event_repository = SqlAlchemyJobEventRepository(session)
+
+            lease = await job_repository.claim_for_processing(
+                job_id, owner=self.worker_id, lease_seconds=self.lease_seconds
+            )
+            if lease is None:
+                await session.rollback()
                 existing = await job_repository.get(job_id)
-                # Completed jobs are safe to ack; active/failed states should retry for lease takeover.
                 if existing is not None and existing.status == JobStatus.SUCCESS:
                     return True, None
-            return False, "IN_PROGRESS_LOCK"
+                JOB_TRANSITION_CONFLICT_TOTAL.labels(target_status=JobStatus.PROCESSING.value).inc()
+                return False, "LEASE_HELD"
+
+            if lease.epoch > 1:
+                JOB_LEASE_TAKEOVER_TOTAL.inc()
+
+            await event_repository.add(
+                build_event(
+                    job_id=job_id,
+                    event_type=EventType.PROCESSING_STARTED,
+                    source="inference-worker",
+                    trace_id=trace_id,
+                    payload={"lease_epoch": lease.epoch},
+                )
+            )
+            await session.commit()
 
         try:
             request_payload = event["payload"]["request"]
-            async with self.session_factory() as session:
-                job_repository = SqlAlchemyJobRepository(session)
-                event_repository = SqlAlchemyJobEventRepository(session)
-                claimed = await job_repository.update_status(job_id, JobStatus.PROCESSING.value)
-                if claimed is None:
-                    # 이미 종료된 job 이거나 다른 워커가 선점했다. 여기서 멈춘다.
-                    JOB_TRANSITION_CONFLICT_TOTAL.labels(target_status=JobStatus.PROCESSING.value).inc()
-                    await session.rollback()
-                    await self.idempotency_store.complete_job_processing(job_id, success=False)
-                    return True, None
-                await event_repository.add(
-                    build_event(
-                        job_id=job_id,
-                        event_type=EventType.PROCESSING_STARTED,
-                        source="inference-worker",
-                        trace_id=trace_id,
-                        payload={},
-                    )
-                )
-                await session.commit()
-
             inference_result = await self.processor.process(request_payload)
 
             downstream_event = build_event(
@@ -102,13 +105,23 @@ class InferencePipelineService:
                 await session.commit()
 
             DOWNSTREAM_EVENT_PUBLISHED_TOTAL.inc()
-            await self.idempotency_store.complete_job_processing(job_id, success=True)
             return True, None
         except Exception as exc:
             async with self.session_factory() as session:
                 job_repository = SqlAlchemyJobRepository(session)
                 event_repository = SqlAlchemyJobEventRepository(session)
-                await job_repository.update_status(job_id, JobStatus.FAILED.value, error=str(exc))
+                marked = await job_repository.update_status(
+                    job_id,
+                    JobStatus.FAILED.value,
+                    error=str(exc),
+                    lease_owner=self.worker_id,
+                    lease_epoch=lease.epoch,
+                    release_lease=True,
+                )
+                if marked is None:
+                    # lease 를 빼앗긴 뒤의 실패다. 인계받은 쪽 결과를 덮지 않는다.
+                    await session.rollback()
+                    return False, str(exc)
                 await event_repository.add(
                     build_event(
                         job_id=job_id,
@@ -120,7 +133,6 @@ class InferencePipelineService:
                 )
                 await session.commit()
             JOB_FAILURE_TOTAL.inc()
-            await self.idempotency_store.complete_job_processing(job_id, success=False)
             return False, str(exc)
 
 

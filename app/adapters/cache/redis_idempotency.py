@@ -30,25 +30,6 @@ class RedisIdempotencyStore(IdempotencyPort):
         value = json.dumps({"status": "COMPLETED", "job_id": job_id})
         await self.redis.set(self._request_key(key), value, ex=self.ttl_seconds)
 
-    async def reserve_job_processing(self, job_id: str) -> bool:
-        value = json.dumps({"status": "PROCESSING", "job_id": job_id})
-        return bool(
-            await self.redis.set(self._job_key(job_id), value, nx=True, ex=self.processing_ttl_seconds)
-        )
-
-    async def complete_job_processing(self, job_id: str, success: bool) -> None:
-        if not success:
-            # Failed attempts should be retriable. Keep only successful completion as a hard lock.
-            await self.redis.delete(self._job_key(job_id))
-            return
-
-        value = json.dumps({"status": "COMPLETED", "job_id": job_id})
-        await self.redis.set(self._job_key(job_id), value, ex=self.ttl_seconds)
-
     @staticmethod
     def _request_key(key: str) -> str:
         return f"idem:req:{key}"
-
-    @staticmethod
-    def _job_key(job_id: str) -> str:
-        return f"idem:job:{job_id}"

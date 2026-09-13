@@ -6,7 +6,6 @@ from typing import Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.adapters.cache.redis_idempotency import RedisIdempotencyStore
 from app.adapters.processing.downstream_dummy import DownstreamDummyProcessor
 from app.adapters.processing.factory import build_primary_processor
 from app.application.pipeline_services import DownstreamPipelineService, InferencePipelineService
@@ -63,11 +62,7 @@ def build_worker_role(
     if settings.worker_role == "unified":
         service = WorkerService(
             session_factory=session_factory,
-            idempotency_store=RedisIdempotencyStore(
-                redis=redis,
-                ttl_seconds=settings.idempotency_ttl_seconds,
-                processing_ttl_seconds=settings.worker_processing_ttl_seconds,
-            ),
+            lease_seconds=settings.worker_processing_ttl_seconds,
             processor=build_primary_processor(settings),
         )
         return UnifiedWorkerRole(service)
@@ -76,22 +71,14 @@ def build_worker_role(
         if settings.architecture_mode in {"C", "BC"}:
             service = InferencePipelineService(
                 session_factory=session_factory,
-                idempotency_store=RedisIdempotencyStore(
-                    redis=redis,
-                    ttl_seconds=settings.idempotency_ttl_seconds,
-                    processing_ttl_seconds=settings.worker_processing_ttl_seconds,
-                ),
+                lease_seconds=settings.worker_processing_ttl_seconds,
                 processor=build_primary_processor(settings, disable_batch=disable_gpu_batch),
                 downstream_topic=settings.kafka_downstream_topic,
             )
         else:
             service = WorkerService(
                 session_factory=session_factory,
-                idempotency_store=RedisIdempotencyStore(
-                    redis=redis,
-                    ttl_seconds=settings.idempotency_ttl_seconds,
-                    processing_ttl_seconds=settings.worker_processing_ttl_seconds,
-                ),
+                lease_seconds=settings.worker_processing_ttl_seconds,
                 processor=build_primary_processor(settings, disable_batch=disable_gpu_batch),
             )
         return InferenceWorkerRole(service)
@@ -104,11 +91,7 @@ def build_worker_role(
         else:
             service = WorkerService(
                 session_factory=session_factory,
-                idempotency_store=RedisIdempotencyStore(
-                    redis=redis,
-                    ttl_seconds=settings.idempotency_ttl_seconds,
-                    processing_ttl_seconds=settings.worker_processing_ttl_seconds,
-                ),
+                lease_seconds=settings.worker_processing_ttl_seconds,
                 processor=build_primary_processor(settings),
             )
         return DownstreamWorkerRole(service)
@@ -116,11 +99,7 @@ def build_worker_role(
     logger.warning("Unknown worker_role=%s, fallback to unified", settings.worker_role)
     service = WorkerService(
         session_factory=session_factory,
-        idempotency_store=RedisIdempotencyStore(
-            redis=redis,
-            ttl_seconds=settings.idempotency_ttl_seconds,
-            processing_ttl_seconds=settings.worker_processing_ttl_seconds,
-        ),
+        lease_seconds=settings.worker_processing_ttl_seconds,
         processor=build_primary_processor(settings),
     )
     return UnifiedWorkerRole(service)

@@ -45,6 +45,16 @@ class Job:
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+@dataclass(slots=True, frozen=True)
+class JobLease:
+    """작업 소유권. epoch 은 결과 기록 시 함께 검사하는 펜싱 토큰이다."""
+
+    job_id: str
+    owner: str
+    epoch: int
+    expires_at: datetime | None = None
+
+
 @dataclass(slots=True)
 class JobEvent:
     event_id: str
