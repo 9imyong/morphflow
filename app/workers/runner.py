@@ -11,6 +11,7 @@ from prometheus_client import start_http_server
 from redis.asyncio import from_url
 
 from app.adapters.messaging.kafka import KafkaEventPublisher
+from app.adapters.messaging.outbox_relay import OutboxRelay
 from app.core.config import get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.kafka_topics import ensure_kafka_topics
@@ -182,6 +183,15 @@ async def run_worker() -> None:
     )
 
     await publisher.start()
+    # downstream 발행은 outbox 를 거친다. 워커도 릴레이를 하나 띄워
+    # 자기가 적재한 메시지를 내보낸다.
+    outbox_relay = OutboxRelay(
+        session_factory=session_factory,
+        publisher=publisher,
+        batch_size=settings.outbox_relay_batch_size,
+        poll_interval_seconds=settings.outbox_relay_poll_interval_seconds,
+    )
+    outbox_relay.start()
     await consumer.start()
     logger.info(
         "worker started role=%s topics=%s group_id=%s retry_max=%d",
@@ -233,6 +243,7 @@ async def run_worker() -> None:
                 continue
             await consumer.commit()
     finally:
+        await outbox_relay.stop()
         await publisher.stop()
         await consumer.stop()
         await redis.aclose()

@@ -27,7 +27,6 @@ class AppContainer:
                 ttl_seconds=self.settings.idempotency_ttl_seconds,
                 processing_ttl_seconds=self.settings.worker_processing_ttl_seconds,
             ),
-            publisher=self.publisher,
             # Keep ingress fixed across architecture modes so backlog continuity is preserved.
             topic=self.settings.kafka_request_topic,
         )

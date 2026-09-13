@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     retry_backoff_seconds: float = 1.0
     retry_backoff_multiplier: float = 2.0
     retry_backoff_max_seconds: float = 30.0
+    outbox_relay_batch_size: int = 100
+    outbox_relay_poll_interval_seconds: float = 0.5
     idempotency_ttl_seconds: int = 3600
     worker_processing_ttl_seconds: int = 1800
     log_level: str = "INFO"

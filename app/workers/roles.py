@@ -82,7 +82,6 @@ def build_worker_role(
                     processing_ttl_seconds=settings.worker_processing_ttl_seconds,
                 ),
                 processor=build_primary_processor(settings, disable_batch=disable_gpu_batch),
-                publisher=publisher,
                 downstream_topic=settings.kafka_downstream_topic,
             )
         else:
