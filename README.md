@@ -1,4 +1,4 @@
-# Fault Monitoring System
+# MorphFlow
 
 Kafka 기반 EDA AI inference pipeline skeleton.
 현재 A/B/C 아키텍처 전환 구조, Retry/DLQ, Observability(EFK 포함)까지 반영된 상태다.
