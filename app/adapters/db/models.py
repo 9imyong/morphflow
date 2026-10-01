@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -21,7 +21,7 @@ class JobModel(Base):
     # 동시에 처리해도 막지 못했다. 소유자와 만료 시각을 job 행에 두고,
     # 결과 기록 시 lease_epoch 를 함께 검사해 만료된 워커의 쓰기를 차단한다.
     lease_owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     # 선점할 때마다 증가하는 펜싱 토큰.
     lease_epoch: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -39,14 +39,17 @@ class OutboxMessageModel(Base):
     """
 
     __tablename__ = "outbox_messages"
-    __table_args__ = (UniqueConstraint("message_id", name="uq_outbox_messages_message_id"),)
+    __table_args__ = (
+        UniqueConstraint("message_id", name="uq_outbox_messages_message_id"),
+        Index("ix_outbox_messages_pending", "id", postgresql_where=text("status = 'PENDING'")),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     message_id: Mapped[str] = mapped_column(String(64), nullable=False)
     topic: Mapped[str] = mapped_column(String(128), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     headers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING", index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="PENDING")
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
