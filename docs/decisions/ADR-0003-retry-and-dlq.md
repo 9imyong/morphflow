@@ -6,10 +6,12 @@ date: 2026-03-10
 decision_makers: [김용준]
 related_requirements: [REQ-platform-001]
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0011
 ---
 
 # ADR-0003: 헤더 기반 재시도와 DLQ 격리
+
+> 백오프를 기다리는 방식은 [ADR-0011](ADR-0011-retry-at-header-and-prefix-commit.md)로 대체되었습니다. 헤더 기반 재시도·역할별 재시도 토픽·DLQ 원본 보존은 유효합니다.
 
 ## 맥락
 

@@ -6,10 +6,12 @@ date: 2026-03-10
 decision_makers: [김용준]
 related_requirements: [REQ-platform-001]
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0009
 ---
 
 # ADR-0002: Redis 예약과 데이터베이스 상태 확인을 결합한 멱등성 보장
+
+> 처리 단계 잠금(`idem:job:{job_id}`)은 [ADR-0009](ADR-0009-db-lease-fencing-token.md)로 대체되었습니다. 요청 단계 멱등성은 유효합니다.
 
 ## 맥락
 

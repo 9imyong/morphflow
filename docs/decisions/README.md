@@ -29,9 +29,13 @@ ADR은 장기간 영향을 주거나 되돌리기 어렵고 선택 이유를 보
 | ID | 제목 | 상태 | 날짜 |
 |---|---|---|---|
 | [ADR-0001](ADR-0001-transitional-architecture-modes.md) | 병목 위치에 따라 전환하는 단일 서비스 구조 채택 | 승인됨 | 2026-03-10 |
-| [ADR-0002](ADR-0002-idempotency-strategy.md) | Redis 예약과 데이터베이스 상태 확인을 결합한 멱등성 보장 | 승인됨 | 2026-03-10 |
-| [ADR-0003](ADR-0003-retry-and-dlq.md) | 헤더 기반 재시도와 DLQ 격리 | 승인됨 | 2026-03-10 |
+| [ADR-0002](ADR-0002-idempotency-strategy.md) | Redis 예약과 데이터베이스 상태 확인을 결합한 멱등성 보장 | 승인됨 (처리 단계는 ADR-0009로 대체) | 2026-03-10 |
+| [ADR-0003](ADR-0003-retry-and-dlq.md) | 헤더 기반 재시도와 DLQ 격리 | 승인됨 (백오프 방식은 ADR-0011로 대체) | 2026-03-10 |
 | [ADR-0004](ADR-0004-fixed-ingress-topic-and-group.md) | 아키텍처 모드 전환 시 진입 토픽과 컨슈머 그룹 고정 | 승인됨 | 2026-03-11 |
 | [ADR-0005](ADR-0005-kind-based-local-kubernetes.md) | Compose에서 kind 기반 Kubernetes로 실행 환경 전환 | 승인됨 | 2026-03-17 |
 | [ADR-0006](ADR-0006-gpu-inference-simulator.md) | 실제 GPU 대신 추론 시뮬레이터 사용 | 승인됨 | 2026-03-10 |
 | [ADR-0007](ADR-0007-kafka-kraft-single-broker.md) | Kafka KRaft 모드 단일 브로커와 토픽 자동 구성 | 승인됨 | 2026-03-10 |
+| [ADR-0008](ADR-0008-conditional-status-transition.md) | Job 상태 갱신을 조건부 전이(CAS)로 제한 | 승인됨 | 2026-09-13 |
+| [ADR-0009](ADR-0009-db-lease-fencing-token.md) | 작업 소유권을 Redis 잠금 대신 DB lease와 펜싱 토큰으로 관리 | 승인됨 | 2026-09-13 |
+| [ADR-0010](ADR-0010-transactional-outbox.md) | Kafka 발행을 트랜잭셔널 아웃박스로 전환 | 승인됨 | 2026-09-13 |
+| [ADR-0011](ADR-0011-retry-at-header-and-prefix-commit.md) | 재시도 백오프는 retry-at 헤더와 파티션 일시 정지로, 커밋은 성공 접두부까지만 | 승인됨 | 2026-09-13 |

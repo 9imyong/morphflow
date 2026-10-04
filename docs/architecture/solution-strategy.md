@@ -22,8 +22,10 @@ last_reviewed: 2026-09-13
 |---|---|---|
 | 처리 지연이 API 응답에 전파되지 않을 것 | 요청 접수와 처리를 Kafka로 분리하고 API는 즉시 `202`로 응답 | [ADR-0001](../decisions/ADR-0001-transitional-architecture-modes.md) |
 | 병목 구간만 선택적으로 분리할 것 | 하나의 코드베이스에서 워커 역할을 설정으로 전환(A/B/C/BC) | [ADR-0001](../decisions/ADR-0001-transitional-architecture-modes.md) |
-| 재처리에도 결과가 한 번만 반영될 것 | Redis 예약을 1차 방어, 데이터베이스 상태 확인을 2차 방어로 사용 | [ADR-0002](../decisions/ADR-0002-idempotency-strategy.md) |
-| 실패가 파이프라인을 막지 않을 것 | 헤더 기반 재시도 후 DLQ로 격리 | [ADR-0003](../decisions/ADR-0003-retry-and-dlq.md) |
+| 같은 요청이 Job을 중복 생성하지 않을 것 | Redis 요청 멱등성 키 예약 | [ADR-0002](../decisions/ADR-0002-idempotency-strategy.md) |
+| 재처리·경쟁에도 결과가 덮어써지지 않을 것 | 조건부 상태 전이(CAS)와 DB lease·펜싱 토큰 | [ADR-0008](../decisions/ADR-0008-conditional-status-transition.md), [ADR-0009](../decisions/ADR-0009-db-lease-fencing-token.md) |
+| 상태 변경이 커밋되면 발행도 반드시 일어날 것 | 트랜잭셔널 아웃박스 | [ADR-0010](../decisions/ADR-0010-transactional-outbox.md) |
+| 실패가 파이프라인을 막지 않을 것 | 헤더 기반 재시도 후 DLQ로 격리. 백오프는 파티션 단위 일시 정지, 커밋은 성공 접두부까지만 | [ADR-0003](../decisions/ADR-0003-retry-and-dlq.md), [ADR-0011](../decisions/ADR-0011-retry-at-header-and-prefix-commit.md) |
 | 전환 판단을 감이 아니라 데이터로 할 것 | 단계별 지표를 분리 계측하고 전환 임계치를 지표로 정의 | [품질](quality.md) |
 
 ## 전환형 아키텍처

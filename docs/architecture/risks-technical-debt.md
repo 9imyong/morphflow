@@ -22,18 +22,17 @@ last_reviewed: 2026-09-13
 |---|---|---|---|
 | 처리 중 예외가 재시도·DLQ 경로를 타지 않음 | 역할 핸들러가 `(False, 사유)`를 반환하지 않고 예외를 던지면 배치가 커밋되지 않아 같은 메시지를 무한 재소비. 파티션 정지 | 메시지 처리 전체를 예외 경계로 감싸 DLQ 판정에 포함 | 미정 |
 | 역직렬화 실패 시 워커 종료 | 잘못된 JSON이 소비 루프 밖으로 예외를 전파해 프로세스가 종료되고 재시작 후 같은 오프셋에서 반복 | 원문 바이트로 소비하고 파싱 실패를 즉시 DLQ 처리 | 미정 |
-| 오프셋 커밋 단위가 폴링 배치 전체 | 한 건 실패가 최대 64건 재처리를 유발. 잠금이 중복 완료는 막지만 불필요한 재작업 발생 | 파티션·오프셋 단위 커밋으로 축소 | 미정 |
-| 잠금 경합이 재시도 횟수를 소모 | 정상 처리 중인 Job의 중복 메시지가 `RETRY_MAX_COUNT` 초과로 DLQ에 적재되어 DLQ 신호의 신뢰도 저하 | 잠금 경합을 일반 실패와 분리해 별도 경로로 처리 | 미정 |
-| 재시도 백오프를 소비 루프 안에서 대기 | 최대 `RETRY_BACKOFF_MAX_SECONDS` 동안 커밋과 폴링이 멈춤. 실패가 몰리면 리밸런스 위험 | 지연 토픽 또는 예약 시각 헤더로 이전 | 미정 |
-| downstream 처리에 처리 잠금 없음 | downstream 워커를 2개 이상으로 확장하면 같은 Job을 동시에 처리할 수 있음 | 추론 경로와 동일한 `idem:job:*` 잠금 적용 | 미정 |
+| lease 경합(`LEASE_HELD`)이 재시도 횟수를 소모 | 정상 처리 중인 Job의 중복 메시지가 `RETRY_MAX_COUNT` 초과로 DLQ에 적재되어 DLQ 신호의 신뢰도 저하 | lease 경합을 일반 실패와 분리해 재시도 횟수에서 제외 | 미정 |
+| downstream 처리에 lease 없음 | downstream 워커를 2개 이상으로 확장하면 같은 Job을 동시에 처리할 수 있음 | 추론 경로와 동일한 lease·펜싱 적용([ADR-0009](../decisions/ADR-0009-db-lease-fencing-token.md)) | 미정 |
+| lease 연장 미호출 | `renew_lease`가 구현돼 있으나 처리 루프에서 호출하지 않음. `WORKER_PROCESSING_TTL_SECONDS`(기본 1800초)보다 긴 처리는 살아 있어도 회수되어 처리가 중복됨(쓰기는 펜싱으로 차단) | 처리 중 주기적으로 lease 연장 | 미정 |
 
 ## 데이터 정합성
 
 | 항목 | 영향 | 대응 | 담당자 |
 |---|---|---|---|
-| 데이터베이스 커밋과 Kafka 발행이 분리 | 발행 실패 시 Job이 `PENDING`에 영구 고착. 같은 멱등성 키로 재요청하면 고착된 Job을 정상 접수로 반환 | Transactional Outbox 도입 또는 `PENDING` 정리 작업 추가. `job_events`가 아웃박스 기반으로 활용 가능 | 미정 |
 | `jobs.retry_count` 미사용 | 항상 0으로 기록되어 재시도 이력을 데이터베이스에서 확인 불가 | 헤더의 `retry-count`를 반영하거나 컬럼 제거 | 미정 |
-| 보존 정책 부재 | `jobs`와 `job_events`가 무기한 증가 | 보존 기간과 아카이브 정책 정의 | 미정 |
+| 보존 정책 부재 | `jobs`, `job_events`, 발행이 끝난 `outbox_messages`가 무기한 증가 | 보존 기간과 아카이브 정책 정의 | 미정 |
+| 아웃박스 릴레이가 행 잠금을 쥔 채 발행 | Kafka 응답이 느려지면 릴레이 트랜잭션과 행 잠금이 길어짐 | 발행 대상을 먼저 표시하고 트랜잭션 밖에서 발행하는 방식 검토 | 미정 |
 
 ## 관측 가능성
 
@@ -60,6 +59,15 @@ last_reviewed: 2026-09-13
 |---|---|---|
 | `inference-topic` | `KAFKA_INFERENCE_TOPIC`이 설정에 존재하고 토픽도 자동 생성되지만 어떤 역할도 발행·소비하지 않음 | 사용하거나 설정에서 제거 |
 | 관측 설정 중복 | `deploy/observability/`, `deploy/k8s/overlays/observability/configs/`, `deploy/prometheus.yml`에 유사 설정이 병존 | 기준 위치를 하나로 정하고 나머지는 참조 |
+
+## 해결된 항목
+
+| 항목 | 해결 | 근거 |
+|---|---|---|
+| 오프셋 커밋 단위가 폴링 배치 전체 | 파티션별 성공 접두부까지만 커밋, 실패 지점으로 seek | [ADR-0011](../decisions/ADR-0011-retry-at-header-and-prefix-commit.md) |
+| 재시도 백오프를 소비 루프 안에서 대기 | `retry-at` 헤더와 파티션 단위 pause | [ADR-0011](../decisions/ADR-0011-retry-at-header-and-prefix-commit.md) |
+| 데이터베이스 커밋과 Kafka 발행이 분리 | 트랜잭셔널 아웃박스 | [ADR-0010](../decisions/ADR-0010-transactional-outbox.md) |
+| 처리 잠금 TTL 만료 시 동시 처리·결과 덮어쓰기 | 조건부 상태 전이와 DB lease·펜싱 토큰 | [ADR-0008](../decisions/ADR-0008-conditional-status-transition.md), [ADR-0009](../decisions/ADR-0009-db-lease-fencing-token.md) |
 
 ## 수용한 부채
 

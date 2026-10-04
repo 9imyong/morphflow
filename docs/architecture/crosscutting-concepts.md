@@ -16,28 +16,29 @@ last_reviewed: 2026-09-13
 - 여러 구성 요소에 반복되는 구현 방식이 표준화될 때
 - 보안 또는 개인정보 처리 원칙이 달라질 때
 
-## 멱등성
+## 멱등성과 작업 소유권
 
-두 단계로 방어합니다. 결정 배경은 [ADR-0002](../decisions/ADR-0002-idempotency-strategy.md)에 있습니다.
+요청과 처리 단계를 다른 수단으로 방어합니다.
 
-| 단계 | 키 | 생성 주체 | 목적 |
-|---|---|---|---|
-| 요청 멱등성 | `idem:req:{Idempotency-Key}` | `api` | 같은 키의 재요청이 Job을 중복 생성하지 않음 |
-| 처리 멱등성 | `idem:job:{job_id}` | 워커 | 같은 Job을 두 워커가 동시에 처리하지 않음 |
+| 단계 | 수단 | 주체 | 목적 | 근거 |
+|---|---|---|---|---|
+| 요청 멱등성 | Redis `idem:req:{Idempotency-Key}` 예약 | `api` | 같은 키의 재요청이 Job을 중복 생성하지 않음 | [ADR-0002](../decisions/ADR-0002-idempotency-strategy.md) |
+| 상태 전이 | 허용 전이표 + 조건부 UPDATE(CAS) | 워커 | 늦게 도착한 쓰기가 앞선 결과를 덮어쓰지 않음 | [ADR-0008](../decisions/ADR-0008-conditional-status-transition.md) |
+| 작업 소유권 | `jobs` 행의 lease + `lease_epoch` 펜싱 토큰 | 추론 워커 | 같은 Job을 두 워커가 동시에 처리하지 않고, 소유권을 잃은 워커의 쓰기를 차단 | [ADR-0009](../decisions/ADR-0009-db-lease-fencing-token.md) |
+| 발행 보장 | 트랜잭셔널 아웃박스 | `api`, 추론 워커 | 상태 변경과 발행의 원자성 | [ADR-0010](../decisions/ADR-0010-transactional-outbox.md) |
 
 원칙은 다음과 같습니다.
 
-- 예약은 `SET key value NX EX ttl`로 수행하고, TTL로 영구 잠금을 방지합니다.
-- **성공 시에만 잠금을 유지**하고(`COMPLETED`, `IDEMPOTENCY_TTL_SECONDS`), 실패 시에는 삭제해 재시도가 가능하게 합니다.
-- 잠금 확보에 실패하면 데이터베이스의 현재 상태를 확인합니다. 이미 `SUCCESS`면 안전하게 커밋하고, 그 외에는 재시도 경로로 보냅니다.
-- Redis는 1차 방어일 뿐이며 최종 판단은 데이터베이스 상태입니다. Redis가 비어 있어도 중복 완료가 발생하지 않아야 합니다.
+- 최종 판단은 데이터베이스 상태입니다. Redis는 요청 단계 중복 생성만 막습니다.
+- 메시지는 at-least-once로 전달됩니다. 같은 메시지가 여러 번, 순서 없이 와도 CAS와 lease가 중복을 흡수해야 합니다.
+- 상태 조건만으로는 lease 인계 직후 옛 소유자의 쓰기를 막지 못하므로 결과 기록에는 항상 epoch을 함께 겁니다.
 
 ## 오류 처리
 
 - 업무 실패와 시스템 예외를 구분하지 않고 동일한 재시도·DLQ 경로로 처리합니다.
 - 워커 역할은 `(성공 여부, 오류 사유)` 형태를 반환하며, 오류 사유는 `error-reason` 헤더로 전파됩니다.
 - API는 실패를 상태 코드로 알리고, 처리 실패는 `GET /jobs/{job_id}`의 `status`와 `error`로 노출합니다.
-- 재시도 정책과 DLQ 격리는 [ADR-0003](../decisions/ADR-0003-retry-and-dlq.md)을 따릅니다.
+- 재시도 정책과 DLQ 격리는 [ADR-0003](../decisions/ADR-0003-retry-and-dlq.md), 백오프와 오프셋 커밋 방식은 [ADR-0011](../decisions/ADR-0011-retry-at-header-and-prefix-commit.md)을 따릅니다.
 
 ## 이벤트 Envelope
 
