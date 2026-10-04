@@ -4,7 +4,6 @@ import logging
 
 from app.core.config import Settings
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -6,10 +6,9 @@
 """
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
-
-from datetime import datetime, timedelta, timezone
-
 from sqlalchemy import update
 
 from app.adapters.db.models import JobModel
@@ -40,7 +39,7 @@ async def _expire_lease(session_factory, job_id: str) -> None:
         await session.execute(
             update(JobModel)
             .where(JobModel.id == job_id)
-            .values(lease_expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+            .values(lease_expires_at=datetime.now(UTC) - timedelta(seconds=1))
         )
         await session.commit()
 

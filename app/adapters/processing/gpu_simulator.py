@@ -151,7 +151,7 @@ class GpuInferenceSimulator(TaskProcessorPort):
                         span.set_attribute("inference.gpu.utilization", self._simulated_gpu_utilization)
                     latencies = [self._resolve_latency_ms(item.payload) for item in items]
                     await asyncio.sleep((max(latencies) + self._batch_overhead_ms) / 1000)
-                    for item, latency_ms in zip(items, latencies):
+                    for item, latency_ms in zip(items, latencies, strict=True):
                         with self._start_span("inference.item_finalize") as item_span:
                             if item_span is not None:
                                 item_span.set_attribute("inference.item.latency_ms", latency_ms)

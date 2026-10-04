@@ -7,7 +7,6 @@ from app.api.dependencies import get_container
 from app.api.schemas import HealthResponse
 from app.core.container import AppContainer
 
-
 router = APIRouter(prefix="/health", tags=["health"])
 
 

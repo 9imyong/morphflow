@@ -31,7 +31,6 @@ from app.workers.roles import (
     resolve_worker_topic,
 )
 
-
 logger = logging.getLogger(__name__)
 RETRY_COUNT_HEADER = "retry-count"
 ERROR_REASON_HEADER = "error-reason"

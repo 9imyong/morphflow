@@ -94,7 +94,7 @@ class OutboxRelay:
                 # 보낼 게 없을 때만 쉰다. 밀려 있으면 연속으로 비운다.
                 try:
                     await asyncio.wait_for(self._stopping.wait(), timeout=self._poll_interval)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
 
     def start(self) -> None:

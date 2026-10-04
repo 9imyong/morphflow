@@ -6,7 +6,6 @@ from app.core.lifespan import lifespan
 from app.core.metrics import HTTP_REQUESTS_TOTAL
 from app.core.tracing import setup_fastapi_tracing
 
-
 app = FastAPI(title="MorphFlow", lifespan=lifespan)
 setup_fastapi_tracing(app, get_settings())
 

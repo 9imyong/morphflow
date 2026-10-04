@@ -5,7 +5,6 @@ from typing import Any
 
 from app.core.config import Settings
 
-
 logger = logging.getLogger(__name__)
 
 _TRACING_AVAILABLE = True

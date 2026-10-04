@@ -4,7 +4,6 @@ from app.api.dependencies import get_container
 from app.api.schemas import JobCreateRequest, JobDetailResponse, JobResponse
 from app.core.container import AppContainer
 
-
 router = APIRouter(tags=["jobs"])
 
 

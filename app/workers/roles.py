@@ -14,7 +14,6 @@ from app.core.config import Settings
 from app.ports.publisher import EventPublisherPort
 from app.ports.worker_role import WorkerRolePort
 
-
 logger = logging.getLogger(__name__)
 REQUEST_GROUP_ID = "architecture-main-worker"
 DOWNSTREAM_GROUP_ID = "architecture-main-worker-downstream"

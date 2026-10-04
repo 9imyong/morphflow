@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import and_, func, or_, select, update
@@ -121,7 +121,7 @@ class SqlAlchemyJobRepository:
 
         SUCCESS 이거나 다른 워커의 lease 가 살아 있으면 None 이다.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(seconds=lease_seconds)
         takeover = and_(
             JobModel.status == JobStatus.PROCESSING.value,
@@ -152,7 +152,7 @@ class SqlAlchemyJobRepository:
 
     async def renew_lease(self, job_id: str, *, owner: str, epoch: int, lease_seconds: int) -> bool:
         """처리가 길어질 때 소유권을 연장한다. 이미 빼앗겼으면 False."""
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=lease_seconds)
+        expires_at = datetime.now(UTC) + timedelta(seconds=lease_seconds)
         statement = (
             update(JobModel)
             .where(
@@ -240,7 +240,7 @@ class SqlAlchemyOutboxRepository:
         await self.session.execute(
             update(OutboxMessageModel)
             .where(OutboxMessageModel.id.in_(list(message_ids)))
-            .values(status="PUBLISHED", published_at=datetime.now(timezone.utc), last_error=None)
+            .values(status="PUBLISHED", published_at=datetime.now(UTC), last_error=None)
         )
 
     async def mark_failed(self, message_id: int, error: str) -> None:

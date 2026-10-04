@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.adapters.db.repositories import (
     SqlAlchemyJobEventRepository,
     SqlAlchemyJobRepository,
@@ -18,7 +20,6 @@ from app.core.metrics import (
 from app.domain.events import EventType, build_event
 from app.domain.models import JobStatus
 from app.ports.task_processor import TaskProcessorPort
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 class InferencePipelineService:

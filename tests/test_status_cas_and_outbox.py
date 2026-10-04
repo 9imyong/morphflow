@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import pytest
+from conftest import FailingProcessor, SuccessProcessor
 from sqlalchemy import select
 
 from app.adapters.db.models import OutboxMessageModel
@@ -15,8 +16,6 @@ from app.application.job_service import JobService
 from app.application.worker_service import WorkerService
 from app.domain.models import Job, JobStatus
 from app.ports.publisher import EventPublisherPort
-
-from conftest import FailingProcessor, SuccessProcessor
 
 
 async def _seed_job(session_factory, job_id: str, status: JobStatus) -> None:
