@@ -5,12 +5,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "fault-monitoring-system"
+    app_name: str = "morphflow"
     app_env: str = "development"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     worker_metrics_port: int = 9000
-    database_url: str = "postgresql+asyncpg://app:app@localhost:5432/fault_monitoring"
+    database_url: str = "postgresql+asyncpg://app:app@localhost:5432/morphflow"
     redis_url: str = "redis://localhost:6379/0"
     architecture_mode: Literal["A", "B", "C", "BC"] = "A"
     kafka_bootstrap_servers: str = "localhost:9092"

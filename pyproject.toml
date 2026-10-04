@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fault-monitoring-system"
+name = "morphflow"
 version = "0.1.0"
-description = "Architecture A scaffold for a transition-ready fault monitoring system"
+description = "Architecture A scaffold for a transition-ready Kafka inference pipeline"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

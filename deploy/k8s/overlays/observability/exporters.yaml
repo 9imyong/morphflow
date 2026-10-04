@@ -90,7 +90,7 @@ spec:
           image: prometheuscommunity/postgres-exporter:v0.17.1
           env:
             - name: DATA_SOURCE_NAME
-              value: postgresql://app:app@postgres:5432/fault_monitoring?sslmode=disable
+              value: postgresql://app:app@postgres:5432/morphflow?sslmode=disable
           ports:
             - containerPort: 9187
 ---

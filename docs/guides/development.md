@@ -64,7 +64,7 @@ ORM 모델만 바꾸고 마이그레이션을 만들지 않으면 CI가 실패�
 
 | 이름 | 필수 | 용도 | 기본값 |
 |---|---|---|---|
-| `DATABASE_URL` | 아니요 | PostgreSQL 접속 문자열 | `postgresql+asyncpg://app:app@localhost:5432/fault_monitoring` |
+| `DATABASE_URL` | 아니요 | PostgreSQL 접속 문자열 | `postgresql+asyncpg://app:app@localhost:5432/morphflow` |
 | `REDIS_URL` | 아니요 | Redis 접속 문자열 | `redis://localhost:6379/0` |
 | `KAFKA_BOOTSTRAP_SERVERS` | 아니요 | Kafka 접속 주소 | `localhost:9092` |
 | `ARCHITECTURE_MODE` | 아니요 | 아키텍처 모드 (`A`·`B`·`C`·`BC`) | `A` |

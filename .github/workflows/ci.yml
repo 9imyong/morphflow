@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
 
     env:
-      DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/fault_monitoring
+      DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/morphflow
       REDIS_URL: redis://localhost:6379/0
       KAFKA_BOOTSTRAP_SERVERS: localhost:9092
 
@@ -69,19 +69,19 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: fault_monitoring
+          POSTGRES_DB: morphflow
           POSTGRES_USER: app
           POSTGRES_PASSWORD: app
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U app -d fault_monitoring"
+          --health-cmd="pg_isready -U app -d morphflow"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
 
     env:
-      DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/fault_monitoring
+      DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/morphflow
 
     steps:
       - name: Checkout

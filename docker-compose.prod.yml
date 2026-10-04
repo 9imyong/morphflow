@@ -50,13 +50,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: fault_monitoring
+      POSTGRES_DB: morphflow
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d fault_monitoring"]
+      test: ["CMD-SHELL", "pg_isready -U app -d morphflow"]
       interval: 5s
       timeout: 5s
       retries: 10

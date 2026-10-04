@@ -50,14 +50,14 @@ spec:
                   key: POSTGRES_PASSWORD
           readinessProbe:
             exec:
-              command: ["sh", "-c", "pg_isready -U app -d fault_monitoring"]
+              command: ["sh", "-c", "pg_isready -U app -d morphflow"]
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 10
           livenessProbe:
             exec:
-              command: ["sh", "-c", "pg_isready -U app -d fault_monitoring"]
+              command: ["sh", "-c", "pg_isready -U app -d morphflow"]
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 3

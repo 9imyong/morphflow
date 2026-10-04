@@ -91,7 +91,7 @@ services:
     image: prometheuscommunity/postgres-exporter:v0.17.1
     container_name: morphflow-obsv-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://app:app@postgres:5432/fault_monitoring?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://app:app@postgres:5432/morphflow?sslmode=disable
     restart: unless-stopped
     networks:
       - morphflow_shared

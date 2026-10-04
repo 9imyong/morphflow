@@ -358,7 +358,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(pg_stat_database_blk_read_time{datname=\"fault_monitoring\"}[5m])",
+          "expr": "rate(pg_stat_database_blk_read_time{datname=\"morphflow\"}[5m])",
           "legendFormat": "db read time rate",
           "range": true,
           "refId": "A"

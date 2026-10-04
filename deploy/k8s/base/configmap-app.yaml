@@ -4,7 +4,7 @@ metadata:
   name: morphflow-app-config
   namespace: morphflow
 data:
-  APP_NAME: fault-monitoring-system
+  APP_NAME: morphflow
   APP_ENV: development
   API_HOST: 0.0.0.0
   API_PORT: "8000"

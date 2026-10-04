@@ -92,7 +92,7 @@ groups:
           description: "Messages are being moved to DLQ; inspect error-reason headers and replay policy."
 
       - alert: PostgresResponseSlow
-        expr: rate(pg_stat_database_blk_read_time{datname="fault_monitoring"}[5m]) > 50
+        expr: rate(pg_stat_database_blk_read_time{datname="morphflow"}[5m]) > 50
         for: 10m
         labels:
           severity: warning
