@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "morphflow"
 version = "0.1.0"
-description = "Architecture A scaffold for a transition-ready Kafka inference pipeline"
+description = "Kafka event-driven AI inference pipeline with mode-switchable architecture"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
